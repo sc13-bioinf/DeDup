@@ -37,6 +37,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang3.tuple.ImmutableTriple;
 
 /**
  * DeDup Tool for Duplicate Removal of short read duplicates in BAM/SAM Files.
@@ -47,7 +48,7 @@ import org.apache.commons.cli.ParseException;
  */
 public class RMDupper{
     private static final String CLASS_NAME = "dedup";
-    private static final String VERSION = "0.9.10";
+    private static final String VERSION = "0.10.0";
 
     private final SamReader inputSam;
     private final SAMFileWriter outputSam;
@@ -55,13 +56,10 @@ public class RMDupper{
     private BufferedWriter bfw;
     private FileWriter histfw;
     private BufferedWriter histbfw;
-    private LinkedHashMap<DedupStore, SAMRecord> workSet;
-    private LinkedHashMap<Integer, SAMRecord> forwards;
     private int total = 0;
     private int removed_reverse = 0;
     private int removed_forward = 0;
     private int removed_merged = 0;
-    private int position_merged = 0;
     private OccurenceCounterMerged oc = new OccurenceCounterMerged();
     private OccurenceCounterSingle ocunmerged = new OccurenceCounterSingle();
 
@@ -83,16 +81,12 @@ public class RMDupper{
         bfw = new BufferedWriter(fw);
         histbfw = new BufferedWriter(histfw);
         outputSam = new SAMFileWriterFactory().makeSAMOrBAMWriter(inputSam.getFileHeader(), false, output);
-        workSet = new LinkedHashMap<DedupStore, SAMRecord>();
-        forwards = new LinkedHashMap<Integer, SAMRecord>();
     }
 
 
     public RMDupper(InputStream in, OutputStream out) {
         inputSam = SamReaderFactory.make().enable(SamReaderFactory.Option.DONT_MEMORY_MAP_INDEX).validationStringency(ValidationStringency.LENIENT).open(SamInputResource.of(in));
         outputSam = new SAMFileWriterFactory().makeSAMWriter(inputSam.getFileHeader(), false, out);
-        workSet = new LinkedHashMap<DedupStore, SAMRecord>();
-        forwards = new LinkedHashMap<Integer, SAMRecord>();
     }
 
 
@@ -139,7 +133,6 @@ public class RMDupper{
         if (pipe) {
             RMDupper rmdup = new RMDupper(System.in, System.out);
             rmdup.readSAMFile();
-            rmdup.resolveDuplicates(4);
             System.out.println("Total reads: " + rmdup.total + "\n");
             System.out.println("Reverse removed: " + rmdup.removed_reverse + "\n");
             System.out.println("Forward removed: " + rmdup.removed_forward + "\n");
@@ -160,7 +153,6 @@ public class RMDupper{
             RMDupper rmdup = new RMDupper(new File(input), output);
             rmdup.readSAMFile();
             rmdup.inputSam.close();
-            rmdup.resolveDuplicates(4);
             rmdup.outputSam.close();
 
             rmdup.bfw.write("Total reads: " + rmdup.total + "\n");
@@ -197,20 +189,59 @@ public class RMDupper{
      * R/F Flags are simply written into output File, also other "non-flagged" ones.
      */
     private void readSAMFile() {
+        ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer = new ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>>(1000);
+
+        String referenceName = SAMRecord.NO_ALIGNMENT_REFERENCE_NAME;
         Iterator it = inputSam.iterator();
         while (it.hasNext()) {
             SAMRecord curr = (SAMRecord) it.next();
-            //Don't do anything with unmapped reads, just write them into the output!
-            if (curr.getReadUnmappedFlag() || curr.getMappingQuality() == 0) {
+            if ( curr.getReferenceName() == SAMRecord.NO_ALIGNMENT_REFERENCE_NAME ) {
                 outputSam.addAlignment(curr);
             } else {
-                checkForDuplication(curr);
+                if ( referenceName == curr.getReferenceName() ) {
+                    queueOrOutput (recordBuffer, curr);
+                } else {
+                    flushQueue (recordBuffer);
+                    queueOrOutput (recordBuffer, curr);
+                    referenceName = curr.getReferenceName();
+                }
             }
 
             total++;
             if(total % 100000 == 0){
                 System.err.println("Reads treated: " + total);
             }
+        }
+        flushQueue(recordBuffer);
+    }
+
+    private void queueOrOutput (ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, SAMRecord curr) {
+        //Don't do anything with unmapped reads, just write them into the output!
+        if (curr.getReadUnmappedFlag() || curr.getMappingQuality() == 0) {
+            this.outputSam.addAlignment(curr);
+        } else {
+             recordBuffer.add (new ImmutableTriple(curr.getAlignmentStart(), curr.getAlignmentEnd(), curr));
+        }
+        checkForDuplication(recordBuffer, curr.getAlignmentEnd());
+    }
+
+    private void flushQueue (ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer) {
+        if ( recordBuffer.size() == 0 ) {
+            return;
+        }
+        int nextAlignmentStart = recordBuffer.peekFirst().middle + 1;
+        Iterator it = recordBuffer.iterator();
+        while (it.hasNext()) {
+            ImmutableTriple<Integer, Integer, SAMRecord> currTriple = (ImmutableTriple<Integer, Integer, SAMRecord>) it.next();
+            nextAlignmentStart = (currTriple.middle + 1 > nextAlignmentStart) ? currTriple.middle + 1 : nextAlignmentStart;
+        }
+        checkForDuplication (recordBuffer, nextAlignmentStart);
+    }
+
+    private void checkForDuplication (ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Integer nextAlignmentStart) {
+        while ( recordBuffer.size() > 0 && recordBuffer.peekFirst().middle < nextAlignmentStart ) {
+            // Attempt to poll alignments from the queue
+            this.outputSam.addAlignment(recordBuffer.poll().right);
         }
     }
 
@@ -220,108 +251,12 @@ public class RMDupper{
      * @param rec SAMRecord
      */
 
-    private void checkForDuplication(SAMRecord rec) {
+    private void checkForDuplication(SAMRecord rec, Integer nextAlignmentStart) {
 
-        if (workSet.isEmpty() && rec.getReadName().startsWith("M_")){
-            DedupStore dp = new DedupStore(rec.getAlignmentStart(), rec.getAlignmentEnd());
-            workSet.put(dp, rec);
-            oc.putValue(dp);
-            this.position_merged = rec.getAlignmentStart();
-        } else
-        if(forwards.isEmpty()  && !rec.getReadName().startsWith("M_")){
-            forwards.put(rec.getAlignmentStart(), rec);
-            ocunmerged.putValue(rec.getAlignmentStart());
-            this.position_merged = rec.getAlignmentStart();
-        } else
-
-        if (rec.getReadName().startsWith("M_")) {
-                int start_outside = rec.getAlignmentStart();
-                if (position_merged == start_outside) {
-                    this.position_merged = start_outside;
-                    DedupStore dp = new DedupStore(rec.getAlignmentStart(), rec.getAlignmentEnd());
-                    oc.putValue(dp);
-
-                    if (workSet.containsKey(dp)) { //Then we have a read inside, that starts and stops the same...
-                        SAMRecord inside = workSet.get(dp);
-                        //Check base qualities now!
-                        if (getQualityScore(inside.getBaseQualityString()) >= getQualityScore(rec.getBaseQualityString())) {
-                            removed_merged++; //if the BQ of our read in the workset is higher than the new read, we drop the new read!
-
-                        } else {
-                            workSet.put(dp, rec); //Same start, stop but better base quality on average!
-                            removed_merged++;
-                        }
-                    } else {
-                        this.position_merged = start_outside;
-                        workSet.put(dp, rec); //in case we have a read with different stop but same start, we want to keep it in the set for now!
-                    }
-                } else {
-                    // Unequal start, stop and flags.
-                    resolveDuplicates(3);
-                    DedupStore dp = new DedupStore(rec.getAlignmentStart(), rec.getAlignmentEnd());
-                    oc.putValue(dp);
-                    workSet.put(dp, rec);
-                    this.position_merged = rec.getAlignmentStart();
-                }
-            } else
-
-        {
-                    int startPosForward = rec.getAlignmentStart();
-
-                    if (forwards.containsKey(startPosForward)) {//Check which one's better
-                        SAMRecord inside = forwards.get(startPosForward);
-                        this.position_merged = startPosForward;
-                        if (getQualityScore(inside.getBaseQualityString()) <= getQualityScore(rec.getBaseQualityString())) {
-                            //Then we drop the old one and replace it by the new entry
-                            forwards.put(rec.getAlignmentStart(), rec);
-                            removed_forward++;
-
-                        } else {
-                            removed_forward++; //cause we just delete the entry in this case!
-                        }
-                    } else {
-                        resolveDuplicates(2);
-                        // We add a new alignment to forwards
-                        forwards.put(rec.getAlignmentStart(), rec);
-                        this.position_merged = rec.getAlignmentStart();
-                    }
-                }
-
-            }
+    }
 
 
-
-        /**
-         * Method that resolved potential duplicates with the same starting position in our workingSet<merged/unmerged>
-         */
-
-    private void resolveDuplicates(int which) {
-     if (which == 2) {
-                for (SAMRecord fw : forwards.values()) {
-                    outputSam.addAlignment(fw);
-                }
-                forwards.clear();
-
-
-        } else if (which == 3) {
-                for (SAMRecord merged : workSet.values()) {
-                    outputSam.addAlignment(merged);
-                }
-                workSet.clear();
-
-
-
-        } else if (which == 4) { //clear all case
-
-            for (SAMRecord fw : forwards.values()) {
-                outputSam.addAlignment(fw);
-            }
-            for (SAMRecord merged : workSet.values()) {
-                outputSam.addAlignment(merged);
-            }
-        }
-
-
+    private void resolveDuplicates() {
     }
 
     /**
