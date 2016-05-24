@@ -279,9 +279,9 @@ public class RMDupper{
                             removed_forward++; //cause we just delete the entry in this case!
                         }
                     } else {
-                        //Unequal start position_merged, we need to resolve duplicate
-                        forwards.put(rec.getAlignmentStart(), rec);
                         resolveDuplicates(2);
+                        // We add a new alignment to forwards
+                        forwards.put(rec.getAlignmentStart(), rec);
                         this.position_merged = rec.getAlignmentStart();
                     }
                 }
