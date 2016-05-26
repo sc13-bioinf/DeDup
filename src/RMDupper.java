@@ -238,7 +238,7 @@ public class RMDupper{
             while ( recordBuffer.size() > 0 && (duplicateBuffer.isEmpty() || duplicateBuffer.peek().left.equals(recordBuffer.peekFirst().left) ) ) {
                 duplicateBuffer.add(recordBuffer.poll());
             }
-            // DEBUG
+            /* DEBUG
             System.out.println ("duplicateBuffer");
             ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> sortedDuplicateBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(duplicateBuffer.size());
             Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> it = duplicateBuffer.iterator();
@@ -250,11 +250,12 @@ public class RMDupper{
             for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
                 System.out.println("dbe: "+currTriple);
             }
-            // END DEBUG
+            END DEBUG */
 
             Set<String> duplicateSet = new HashSet<String>();
             if ( duplicateBuffer.size() > 1 ) {
                 resolveDuplicates(duplicateSet, duplicateBuffer);
+                resolveDuplicatesStartOnly(duplicateSet, duplicateBuffer);
             }
             //System.out.println("duplicateSet:");
             //System.out.println(duplicateSet);
@@ -262,7 +263,7 @@ public class RMDupper{
             while ( duplicateBuffer.size() > 0 ) {
                 ImmutableTriple<Integer, Integer, SAMRecord> pollTriple = duplicateBuffer.poll();
                 if ( !duplicateSet.contains(pollTriple.right.getReadName()) ) {
-                    System.out.println ("kept"+pollTriple);
+                    //System.out.println ("kept"+pollTriple);
                     this.outputSam.addAlignment(pollTriple.right);
                 }
             }
@@ -271,7 +272,7 @@ public class RMDupper{
     }
 
     private void resolveDuplicates(Set<String> duplicateSet, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer) {
-        System.out.println ("resolveDuplicates");
+        //System.out.println ("resolveDuplicates");
         ImmutableTriple<Integer, Integer, SAMRecord> bestTriple = duplicateBuffer.peek();
 
         ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> sortedDuplicateBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(duplicateBuffer.size());
@@ -284,7 +285,7 @@ public class RMDupper{
         for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
             duplicateSet.add(currTriple.right.getReadName());
             if ( bestTriple.middle.equals(currTriple.middle) ) {
-                bestTriple = resolveDuplicate(duplicateSet, bestTriple, currTriple);
+                bestTriple = resolveDuplicate(bestTriple, currTriple);
             } else {
                 duplicateSet.remove(bestTriple.right.getReadName());
                 bestTriple = currTriple;
@@ -293,7 +294,7 @@ public class RMDupper{
         duplicateSet.remove(bestTriple.right.getReadName());
     }
 
-    private ImmutableTriple<Integer, Integer, SAMRecord> resolveDuplicate(Set<String> duplicateSet, ImmutableTriple<Integer, Integer, SAMRecord> bestTriple, ImmutableTriple<Integer, Integer, SAMRecord> currTriple) {
+    private ImmutableTriple<Integer, Integer, SAMRecord> resolveDuplicate(ImmutableTriple<Integer, Integer, SAMRecord> bestTriple, ImmutableTriple<Integer, Integer, SAMRecord> currTriple) {
         if ( getQualityScore(currTriple.right.getBaseQualityString()) > getQualityScore(bestTriple.right.getBaseQualityString()) ) {
             return currTriple;
         }
@@ -306,6 +307,34 @@ public class RMDupper{
         }
         else {
             return bestTriple;
+        }
+    }
+
+    private void resolveDuplicatesStartOnly(Set<String> duplicateSet, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer) {
+
+        ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> sortedDuplicateBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(duplicateBuffer.size());
+        Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> it = duplicateBuffer.iterator();
+        while (it.hasNext()) {
+            ImmutableTriple<Integer, Integer, SAMRecord> currTriple = it.next();
+            if ( currTriple.right.getReadName().startsWith("F_") )
+            {
+                sortedDuplicateBuffer.add(currTriple);
+            }
+        }
+        sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getMiddle));
+
+        if ( sortedDuplicateBuffer.size() > 1 ) {
+            ImmutableTriple<Integer, Integer, SAMRecord> bestTriple = sortedDuplicateBuffer.get(0);
+            for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
+                if ( getQualityScore(currTriple.right.getBaseQualityString()) > getQualityScore(bestTriple.right.getBaseQualityString()) ) {
+                    bestTriple = currTriple;
+                }
+            }
+            for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
+                if ( !currTriple.right.getReadName().equals(bestTriple.right.getReadName()) ) {
+                    duplicateSet.add(currTriple.right.getReadName());
+                }
+            }
         }
     }
 
