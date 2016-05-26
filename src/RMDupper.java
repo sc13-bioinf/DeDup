@@ -240,22 +240,71 @@ public class RMDupper{
     private void checkForDuplication (ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Integer nextAlignmentStart) {
         while ( recordBuffer.size() > 0 && recordBuffer.peekFirst().middle < nextAlignmentStart ) {
             // Attempt to poll alignments from the queue
-            this.outputSam.addAlignment(recordBuffer.poll().right);
+            ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(1000);
+            Iterator it = recordBuffer.iterator();
+            while (it.hasNext()) {
+                ImmutableTriple<Integer, Integer, SAMRecord> peekTriple = (ImmutableTriple<Integer, Integer, SAMRecord>) it.next();
+                //System.out.println("peekFirst: "+recordBuffer.peekFirst().left+"\t"+recordBuffer.peekFirst().middle);
+                //System.out.println("peekTriple: "+peekTriple.left+"\t"+peekTriple.middle);
+                if ( recordBuffer.peekFirst().left.equals(peekTriple.left)  ) {
+                    duplicateBuffer.add(peekTriple);
+                } else {
+                    break;
+                }
+            }
+            //System.out.println ("duplicateBuffer");
+            //System.out.println(duplicateBuffer);
+            Set<String> duplicateSet = new HashSet<String>();
+            int resolved = duplicateBuffer.size();
+            if ( duplicateBuffer.size() > 1 ) {
+                resolveDuplicates(duplicateSet, duplicateBuffer);
+                System.out.println("duplicateSet:");
+                System.out.println(duplicateSet);
+            }
+            duplicateBuffer.clear();
+            while ( resolved > 0 ) {
+                ImmutableTriple<Integer, Integer, SAMRecord> pollTriple = recordBuffer.poll();
+                if ( !duplicateSet.contains(pollTriple.right.getReadName()) ) {
+                    this.outputSam.addAlignment(pollTriple.right);
+                }
+                resolved--;
+            }
+            duplicateSet.clear();
         }
     }
 
-    /**
-     * Method that checks a provided SAMRecord for potential duplication, calling resolveduplicates(), as soon as done.
-     *
-     * @param rec SAMRecord
-     */
+    private void resolveDuplicates(Set<String> duplicateSet, ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer) {
+        System.out.println ("resolveDuplicates");
+        duplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getMiddle));
+        System.out.println(duplicateBuffer);
+        ImmutableTriple<Integer, Integer, SAMRecord> bestTriple = duplicateBuffer.get(0);
 
-    private void checkForDuplication(SAMRecord rec, Integer nextAlignmentStart) {
-
+        for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : duplicateBuffer ) {
+            duplicateSet.add(currTriple.right.getReadName());
+            if ( bestTriple.middle.equals(currTriple.middle) ) {
+                bestTriple = resolveDuplicate(duplicateSet, bestTriple, currTriple);
+            } else {
+                duplicateSet.remove(bestTriple.right.getReadName());
+                bestTriple = currTriple;
+            }
+        }
+        duplicateSet.remove(bestTriple.right.getReadName());
     }
 
-
-    private void resolveDuplicates() {
+    private ImmutableTriple<Integer, Integer, SAMRecord> resolveDuplicate(Set<String> duplicateSet, ImmutableTriple<Integer, Integer, SAMRecord> bestTriple, ImmutableTriple<Integer, Integer, SAMRecord> currTriple) {
+        if ( getQualityScore(currTriple.right.getBaseQualityString()) > getQualityScore(bestTriple.right.getBaseQualityString()) ) {
+            return currTriple;
+        }
+        else if ( getQualityScore(currTriple.right.getBaseQualityString()) == getQualityScore(bestTriple.right.getBaseQualityString()) ) {
+            if ( currTriple.right.getReadName().startsWith("M_") ) {
+                return currTriple;
+            } else {
+                return bestTriple;
+            }
+        }
+        else {
+            return bestTriple;
+        }
     }
 
     /**
