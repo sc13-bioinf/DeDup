@@ -227,16 +227,7 @@ public class RMDupper{
     }
 
     private void flushQueue (ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer) {
-        //int flushQueueCount = 0;
-        //while ( recordBuffer.size() > 0 ) {
-        //              Iterator it = recordBuffer.iterator();
-        //               while (it.hasNext()) {
-        //               ImmutableTriple<Integer, Integer, SAMRecord> peekTriple = (ImmutableTriple<Integer, Integer, SAMRecord>) it.next();
-        //                 System.out.println("fqc: "+flushQueueCount+"\t"+peekTriple);
-        //               }
-         // flushQueueCount++;
-            checkForDuplication (recordBuffer);
-        //}
+        checkForDuplication (recordBuffer);
     }
 
     private void checkForDuplication (ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer) {
@@ -247,9 +238,10 @@ public class RMDupper{
                 duplicateBuffer.add(recordBuffer.poll());
             }
             System.out.println ("duplicateBuffer");
-            //System.out.println(duplicateBuffer);
-            while (duplicateBuffer.size() > 0 ) {
-                System.out.println("dbe: "+duplicateBuffer.poll());
+            Iterator it = duplicateBuffer.iterator();
+            while (it.hasNext()) {
+                ImmutableTriple<Integer, Integer, SAMRecord> peekTriple = (ImmutableTriple<Integer, Integer, SAMRecord>) it.next();
+                System.out.println("dbe: "+peekTriple);
             }
 
             Set<String> duplicateSet = new HashSet<String>();
