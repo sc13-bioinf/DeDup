@@ -220,65 +220,61 @@ public class RMDupper{
         if (curr.getReadUnmappedFlag() || curr.getMappingQuality() == 0) {
             this.outputSam.addAlignment(curr);
         } else {
-             recordBuffer.add (new ImmutableTriple(curr.getAlignmentStart(), curr.getAlignmentEnd(), curr));
+            if ( recordBuffer.size() > 0 && recordBuffer.peekFirst().left < curr.getAlignmentStart() ) {
+                checkForDuplication(recordBuffer);
+            }
+            recordBuffer.add (new ImmutableTriple(curr.getAlignmentStart(), curr.getAlignmentEnd(), curr));
         }
-        checkForDuplication(recordBuffer, curr.getAlignmentEnd());
     }
 
     private void flushQueue (ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer) {
-        if ( recordBuffer.size() == 0 ) {
-            return;
-        }
-        int nextAlignmentStart = recordBuffer.peekFirst().middle + 1;
-        Iterator it = recordBuffer.iterator();
-        while (it.hasNext()) {
-            ImmutableTriple<Integer, Integer, SAMRecord> currTriple = (ImmutableTriple<Integer, Integer, SAMRecord>) it.next();
-            nextAlignmentStart = (currTriple.middle + 1 > nextAlignmentStart) ? currTriple.middle + 1 : nextAlignmentStart;
-        }
-        checkForDuplication (recordBuffer, nextAlignmentStart);
+        //int flushQueueCount = 0;
+        //while ( recordBuffer.size() > 0 ) {
+        //              Iterator it = recordBuffer.iterator();
+        //               while (it.hasNext()) {
+        //               ImmutableTriple<Integer, Integer, SAMRecord> peekTriple = (ImmutableTriple<Integer, Integer, SAMRecord>) it.next();
+        //                 System.out.println("fqc: "+flushQueueCount+"\t"+peekTriple);
+        //               }
+         // flushQueueCount++;
+            checkForDuplication (recordBuffer);
+        //}
     }
 
-    private void checkForDuplication (ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Integer nextAlignmentStart) {
-        while ( recordBuffer.size() > 0 && recordBuffer.peekFirst().middle < nextAlignmentStart ) {
-            // Attempt to poll alignments from the queue
-            ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(1000);
-            Iterator it = recordBuffer.iterator();
-            while (it.hasNext()) {
-                ImmutableTriple<Integer, Integer, SAMRecord> peekTriple = (ImmutableTriple<Integer, Integer, SAMRecord>) it.next();
-                //System.out.println("peekFirst: "+recordBuffer.peekFirst().left+"\t"+recordBuffer.peekFirst().middle);
-                //System.out.println("peekTriple: "+peekTriple.left+"\t"+peekTriple.middle);
-                if ( recordBuffer.peekFirst().left.equals(peekTriple.left)  ) {
-                    duplicateBuffer.add(peekTriple);
-                } else {
-                    break;
-                }
+    private void checkForDuplication (ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer) {
+        PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getMiddle));
+        while ( recordBuffer.size() > 0 ) {
+            // Fill duplicateBuffer with alignments from the queue that have the same start
+            while ( recordBuffer.size() > 0 && (duplicateBuffer.isEmpty() || duplicateBuffer.peek().left.equals(recordBuffer.peekFirst().left) ) ) {
+                duplicateBuffer.add(recordBuffer.poll());
             }
-            //System.out.println ("duplicateBuffer");
+            System.out.println ("duplicateBuffer");
             //System.out.println(duplicateBuffer);
+            while (duplicateBuffer.size() > 0 ) {
+                System.out.println("dbe: "+duplicateBuffer.poll());
+            }
+
             Set<String> duplicateSet = new HashSet<String>();
-            int resolved = duplicateBuffer.size();
             if ( duplicateBuffer.size() > 1 ) {
                 resolveDuplicates(duplicateSet, duplicateBuffer);
-                System.out.println("duplicateSet:");
-                System.out.println(duplicateSet);
             }
-            duplicateBuffer.clear();
-            while ( resolved > 0 ) {
-                ImmutableTriple<Integer, Integer, SAMRecord> pollTriple = recordBuffer.poll();
+            System.out.println("duplicateSet:");
+            System.out.println(duplicateSet);
+
+            while ( duplicateBuffer.size() > 0 ) {
+                ImmutableTriple<Integer, Integer, SAMRecord> pollTriple = duplicateBuffer.poll();
                 if ( !duplicateSet.contains(pollTriple.right.getReadName()) ) {
                     this.outputSam.addAlignment(pollTriple.right);
                 }
-                resolved--;
             }
             duplicateSet.clear();
         }
     }
 
-    private void resolveDuplicates(Set<String> duplicateSet, ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer) {
+    private void resolveDuplicates(Set<String> duplicateSet, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer) {
         System.out.println ("resolveDuplicates");
-        duplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getMiddle));
+        //duplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getMiddle));
         System.out.println(duplicateBuffer);
-        ImmutableTriple<Integer, Integer, SAMRecord> bestTriple = duplicateBuffer.get(0);
+        ImmutableTriple<Integer, Integer, SAMRecord> bestTriple = duplicateBuffer.peek();
 
         for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : duplicateBuffer ) {
             duplicateSet.add(currTriple.right.getReadName());
