@@ -23,14 +23,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.DecimalFormat;
+import htsjdk.samtools.*;
 import java.util.*;
 import java.io.File;
-import java.util.concurrent.ConcurrentHashMap;
 
 import datastructure.DedupStore;
 import datastructure.OccurenceCounterMerged;
 import datastructure.OccurenceCounterSingle;
-import htsjdk.samtools.*;
+
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -206,6 +206,7 @@ public class RMDupper{
             } else {
                 checkForDuplication(curr);
             }
+
             total++;
             if(total % 100000 == 0){
                 System.err.println("Reads treated: " + total);
