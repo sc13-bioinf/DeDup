@@ -3,7 +3,8 @@ import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 import org.junit.Before;
 
-import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -38,9 +39,8 @@ public class RMDupperTest {
         rmdup.readSAMFile();
         rmdup.finish();
         copier.start();
-        List<String> readNames = Utils.getReadNamesFromSAM(inFromResult);
-        //System.out.println("rdybq");
-        //System.out.println(readNames);
-        readNames.forEach(System.out::println);
+        Set<String> observedReadNames = Utils.getReadNamesFromSAM(inFromResult).stream().collect(Collectors.toSet());
+        observedReadNames.forEach(System.out::println);
+        assertEquals(observedReadNames, Data.RMDupperTest__resolveDuplicate_yields_best_quality_expectedReadNames);
     }
 }
