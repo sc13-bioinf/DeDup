@@ -52,10 +52,6 @@ public class RMDupper{
 
     private final SamReader inputSam;
     private final SAMFileWriter outputSam;
-    private FileWriter fw;
-    private BufferedWriter bfw;
-    private FileWriter histfw;
-    private BufferedWriter histbfw;
     private int total = 0;
     private int removed_reverse = 0;
     private int removed_forward = 0;
@@ -66,21 +62,9 @@ public class RMDupper{
 
 
 
-    public RMDupper(File f, String outputpath) {
-        inputSam = SamReaderFactory.make().enable(SamReaderFactory.Option.DONT_MEMORY_MAP_INDEX).validationStringency(ValidationStringency.LENIENT).open(f);
-
-        File output = new File(outputpath + "/" + Files.getNameWithoutExtension(f.getAbsolutePath()) + "_rmdup.bam");
-        File outputlog = new File(outputpath + "/" + Files.getNameWithoutExtension(f.getAbsolutePath()) + ".log");
-        File outputhist = new File(outputpath + "/" + Files.getNameWithoutExtension(f.getAbsolutePath()) + ".hist");
-        try {
-            fw = new FileWriter(outputlog);
-            histfw = new FileWriter(outputhist);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        bfw = new BufferedWriter(fw);
-        histbfw = new BufferedWriter(histfw);
-        outputSam = new SAMFileWriterFactory().makeSAMOrBAMWriter(inputSam.getFileHeader(), false, output);
+    public RMDupper(File inputFile, File outputFile) {
+        inputSam = SamReaderFactory.make().enable(SamReaderFactory.Option.DONT_MEMORY_MAP_INDEX).validationStringency(ValidationStringency.LENIENT).open(inputFile);
+        outputSam = new SAMFileWriterFactory().makeSAMOrBAMWriter(inputSam.getFileHeader(), false, outputFile);
     }
 
 
@@ -112,7 +96,7 @@ public class RMDupper{
 
         boolean pipe = true;
         String input = "";
-        String output = "";
+        String outputpath = "";
         try {
             CommandLine cmd = parser.parse(options, args);
 
@@ -121,7 +105,7 @@ public class RMDupper{
                 pipe = false;
             }
             if (cmd.hasOption('o')) {
-                output = cmd.getOptionValue('o');
+                outputpath = cmd.getOptionValue('o');
             }
         } catch (ParseException e) {
             helpformatter.printHelp(CLASS_NAME, options);
@@ -145,40 +129,60 @@ public class RMDupper{
                 System.out.println("Duplication Rate: " + df.format((double) (rmdup.removed_merged + rmdup.removed_reverse + rmdup.removed_forward) / (double) rmdup.total));
             }
         } else {
-            if (output.length() == 0) {
+            if (outputpath.length() == 0) {
                 System.err.println("The output folder has to be specified");
                 helpformatter.printHelp(CLASS_NAME, options);
                 System.exit(0);
             }
-            RMDupper rmdup = new RMDupper(new File(input), output);
-            rmdup.readSAMFile();
-            rmdup.inputSam.close();
-            rmdup.outputSam.close();
 
-            rmdup.bfw.write("Total reads: " + rmdup.total + "\n");
-            rmdup.bfw.write("Reverse removed: " + rmdup.removed_reverse + "\n");
-            rmdup.bfw.write("Forward removed: " + rmdup.removed_forward + "\n");
-            rmdup.bfw.write("Merged removed: " + rmdup.removed_merged + "\n");
-            rmdup.bfw.write("Total removed: " + (rmdup.removed_forward + rmdup.removed_merged
+            File inputFile = new File(input);
+            File outputFile = new File(outputpath + "/" + Files.getNameWithoutExtension(inputFile.getAbsolutePath()) + "_rmdup.bam");
+            File outputlog = new File(outputpath + "/" + Files.getNameWithoutExtension(inputFile.getAbsolutePath()) + ".log");
+            File outputhist = new File(outputpath + "/" + Files.getNameWithoutExtension(inputFile.getAbsolutePath()) + ".hist");
+
+
+
+
+
+
+            try {
+                FileWriter fw = new FileWriter(outputlog);
+                FileWriter histfw = new FileWriter(outputhist);
+                BufferedWriter bfw = new BufferedWriter(fw);
+                BufferedWriter histbfw = new BufferedWriter(histfw);
+
+                RMDupper rmdup = new RMDupper(inputFile, outputFile);
+                rmdup.readSAMFile();
+                rmdup.inputSam.close();
+                rmdup.outputSam.close();
+
+                bfw.write("Total reads: " + rmdup.total + "\n");
+                bfw.write("Reverse removed: " + rmdup.removed_reverse + "\n");
+                bfw.write("Forward removed: " + rmdup.removed_forward + "\n");
+                bfw.write("Merged removed: " + rmdup.removed_merged + "\n");
+                bfw.write("Total removed: " + (rmdup.removed_forward + rmdup.removed_merged
                     + rmdup.removed_reverse) + "\n");
-            rmdup.bfw.write("Duplication Rate: " + df.format((double) (rmdup.removed_merged + rmdup.removed_reverse + rmdup.removed_forward) / (double) rmdup.total));
-            rmdup.bfw.flush();
-            rmdup.bfw.close();
+                bfw.write("Duplication Rate: " + df.format((double) (rmdup.removed_merged + rmdup.removed_reverse + rmdup.removed_forward) / (double) rmdup.total));
+                bfw.flush();
+                bfw.close();
 
-            rmdup.histbfw.write(rmdup.oc.getHistogram());
-            rmdup.histbfw.flush();
-            rmdup.histbfw.close();
+                histbfw.write(rmdup.oc.getHistogram());
+                histbfw.flush();
+                histbfw.close();
 
 
-            System.out.println("Total reads: " + rmdup.total + "\n");
-            System.out.println("Unmerged removed: " + rmdup.removed_forward + "\n");
-            System.out.println("Merged removed: " + rmdup.removed_merged + "\n");
-            System.out.println("Total removed: " + (rmdup.removed_forward + rmdup.removed_merged
+                System.out.println("Total reads: " + rmdup.total + "\n");
+                System.out.println("Unmerged removed: " + rmdup.removed_forward + "\n");
+                System.out.println("Merged removed: " + rmdup.removed_merged + "\n");
+                System.out.println("Total removed: " + (rmdup.removed_forward + rmdup.removed_merged
                     + rmdup.removed_reverse) + "\n");
-            if (rmdup.removed_merged + rmdup.removed_forward + rmdup.removed_reverse == 0) {
-                System.out.println("Duplication Rate: " + df.format(0.00));
-            } else {
-                System.out.println("Duplication Rate: " + df.format((double) (rmdup.removed_merged + rmdup.removed_reverse + rmdup.removed_forward) / (double) rmdup.total));
+                if (rmdup.removed_merged + rmdup.removed_forward + rmdup.removed_reverse == 0) {
+                    System.out.println("Duplication Rate: " + df.format(0.00));
+                } else {
+                    System.out.println("Duplication Rate: " + df.format((double) (rmdup.removed_merged + rmdup.removed_reverse + rmdup.removed_forward) / (double) rmdup.total));
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }
@@ -188,7 +192,7 @@ public class RMDupper{
      * Currently, only merged Reads with the "M" Flag in front are checked for Duplicates.
      * R/F Flags are simply written into output File, also other "non-flagged" ones.
      */
-    private void readSAMFile() {
+    public void readSAMFile() {
         ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer = new ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>>(1000);
 
         String referenceName = SAMRecord.NO_ALIGNMENT_REFERENCE_NAME;
@@ -223,7 +227,7 @@ public class RMDupper{
             if ( recordBuffer.size() > 0 && recordBuffer.peekFirst().left < curr.getAlignmentStart() ) {
                 checkForDuplication(recordBuffer);
             }
-            recordBuffer.add (new ImmutableTriple(curr.getAlignmentStart(), curr.getAlignmentEnd(), curr));
+            recordBuffer.add (new ImmutableTriple<Integer, Integer, SAMRecord>(curr.getAlignmentStart(), curr.getAlignmentEnd(), curr));
         }
     }
 
@@ -350,5 +354,10 @@ public class RMDupper{
             result += (int) c;
         }
         return result;
+    }
+
+    public void finish () throws IOException {
+        this.inputSam.close();
+        this.outputSam.close();
     }
 }
