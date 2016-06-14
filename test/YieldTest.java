@@ -1,7 +1,6 @@
 
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;
-import org.junit.Before;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -13,24 +12,11 @@ import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.io.IOException;
 
+public class YieldTest extends AbstractTest {
 
-public class RMDupperTest {
-    InputStream in = null;
-    ByteArrayOutputStream out = null;
-    PipedOutputStream outFromResult = null;
-    PipedInputStream inFromResult = null;
-    Thread copier;
-    PrintStream console = null;
-
-    @Before
-    public void setUp() throws IOException {
-      in = getClass().getResourceAsStream("/test-resources/yield_test.bam");
-      out = new ByteArrayOutputStream();
-      inFromResult = new PipedInputStream();
-      outFromResult = new PipedOutputStream(inFromResult);
-      Runnable copyOutput = () -> { try { out.writeTo(outFromResult);outFromResult.close(); } catch (IOException ioe) { throw new RuntimeException(ioe);} };
-      copier = new Thread(copyOutput);
-      console = System.out;
+    public void setUp () throws IOException {
+          in = getClass().getResourceAsStream("/test-resources/yield_test.bam");
+          universalSetUp();
     }
 
     @Test

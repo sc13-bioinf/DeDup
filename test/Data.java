@@ -29,4 +29,13 @@ public class Data {
             "M_NS500559:30:HNM25BGXX:3:21403:16465:9082",
             "F_NS500559:30:HNM25BGXX:4:22510:21196:11652",
             "R_NS500559:30:HNM25BGXX:1:21203:15540:16052").collect(Collectors.toSet());
+        public static final Set<String> RMDupperTest__resolveDuplicate_forward_expectedReadNames = Stream.of(
+        "F_NS500559:30:HNM25BGXX:1:13209:14750:12764",
+        "F_NS500559:30:HNM25BGXX:2:22309:10359:11690").collect(Collectors.toSet());
+        public static final Set<String> RMDupperTest__resolveDuplicate_reverse_expectedReadNames = Stream.of(
+        "R_NS500559:30:HNM25BGXX:1:23203:15383:1746",
+        "R_NS500559:30:HNM25BGXX:1:21203:15540:16052").collect(Collectors.toSet());
+        public static final Set<String> RMDupperTest__resolveDuplicate_reverse_merged_expectedReadNames = Stream.of(
+        "M_NS500559:30:HNM25BGXX:2:12204:22389:14660"
+        ).collect(Collectors.toSet());
 }
