@@ -16,7 +16,7 @@ public class YieldTest extends AbstractTest {
 
     public void setUp () throws IOException {
           in = getClass().getResourceAsStream("/test-resources/yield_test.bam");
-          universalSetUp();
+          universalSetup();
     }
 
     @Test

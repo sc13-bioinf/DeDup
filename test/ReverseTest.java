@@ -15,7 +15,7 @@ public class ReverseTest extends AbstractTest {
 
   public void setUp () throws IOException {
         in = getClass().getResourceAsStream("/test-resources/reverse_test.bam");
-        universalSetUp();
+        universalSetup();
   }
 
   @Test

@@ -9,7 +9,7 @@ public class ReverseMergedTest extends AbstractTest {
 
   public void setUp () throws IOException {
         in = getClass().getResourceAsStream("/test-resources/reverse_merged_test.bam");
-        universalSetUp();
+        universalSetup();
   }
 
   @Test

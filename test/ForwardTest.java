@@ -16,7 +16,7 @@ public class ForwardTest extends AbstractTest {
 
   public void setUp () throws IOException {
         in = getClass().getResourceAsStream("/test-resources/forward_test.bam");
-        universalSetUp();
+        universalSetup();
   }
 
   @Test
