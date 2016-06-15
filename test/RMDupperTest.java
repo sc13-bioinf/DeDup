@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 public class RMDupperTest extends AbstractTest {
 
   public void setUp () throws IOException {
-        in = getClass().getResourceAsStream("/test-resources/forward_test.bam");
+        in = getClass().getResourceAsStream("/test-resources/queueOrOutput_test_trigger_checkForDuplication_only_f.bam");
         universalSetup();
         inputSAMoutputSAMrecordBufferSetup();
   }
@@ -25,8 +25,10 @@ public class RMDupperTest extends AbstractTest {
           RMDupper.queueOrOutput (outputSam, recordBuffer, curr);
       }
       RMDupper.flushQueue(outputSam, recordBuffer);
+      inputSam.close();
+      outputSam.close();
       copier.start();
       Set<String> observedReadNames = Utils.getReadNamesFromSAM(inFromResult).stream().collect(Collectors.toSet());
-      assertEquals(observedReadNames, Data.RMDupperTest__resolveDuplicate_forward_expectedReadNames);
+      assertEquals(Data.RMDupperTest__queueOrOutput_nextAlignmentStartBeyondFirstEndTriggersCheckForDuplication_expectedReadNames, observedReadNames);
   }
 }

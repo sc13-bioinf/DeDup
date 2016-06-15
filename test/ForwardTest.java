@@ -26,6 +26,6 @@ public class ForwardTest extends AbstractTest {
     rmdup.finish();
     copier.start();
     Set<String> observedReadNames = Utils.getReadNamesFromSAM(inFromResult).stream().collect(Collectors.toSet());
-    assertEquals(observedReadNames, Data.RMDupperTest__resolveDuplicate_forward_expectedReadNames);
+    assertEquals(Data.RMDupperTest__resolveDuplicate_forward_expectedReadNames, observedReadNames);
   }
 }
