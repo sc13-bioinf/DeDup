@@ -239,7 +239,7 @@ public class RMDupper{
         // At this point recordBuffer contains all alignments that overlap with its first entry
         // Therefore the task here is to de-duplicate for the first entry in recordBuffer
 
-        PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, new SAMRecordQualityComparator()));
+        PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, new SAMRecordQualityComparator().reversed()));
         System.out.println("recordBuffer:");
         Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> it = recordBuffer.iterator();
         while (it.hasNext()) {
@@ -273,8 +273,19 @@ for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateB
     System.out.println("dbe: "+currTriple);
 }
 /* END DEBUG */
-
-  outputSam.addAlignment(duplicateBuffer.poll().right);
+  //discardSet.add(duplicateBuffer.peek().right.getReadName());
+  outputSam.addAlignment(duplicateBuffer.peek().right);
+  while ( !duplicateBuffer.isEmpty() ) {
+    discardSet.add(duplicateBuffer.poll().right.getReadName());
+  }
+    System.out.println("discardSet: "+discardSet);
+    System.out.println("first recordBuffer: "+recordBuffer.peekFirst());
+    // Maintain the invariant that the first item in recordBuffer may have duplicates
+    while ( discardSet.contains(recordBuffer.peekFirst().right.getReadName()) ) {
+      discardSet.remove(recordBuffer.poll().right.getReadName());
+    }
+    System.out.println("discardSet: "+discardSet);
+    System.out.println("first recordBuffer: "+recordBuffer.peekFirst());
 
     }
 
