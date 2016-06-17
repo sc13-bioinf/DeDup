@@ -4,6 +4,7 @@ import org.junit.Test;
 
 import htsjdk.samtools.SAMRecord;
 
+import java.util.HashSet;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Set;
@@ -19,10 +20,11 @@ public class ForwardRMDupperTest extends AbstractTest {
 
   @Test
   public void   queueOrOutput_nextAlignmentStartBeyondFirstEndTriggersCheckForDuplication_pre () throws IOException {
+      Set<String> discardSet = new HashSet<String>();
       Iterator it = inputSam.iterator();
       for (int i = 0; i < 3; i++) {
           SAMRecord curr = (SAMRecord) it.next();
-          RMDupper.queueOrOutput (outputSam, recordBuffer, curr);
+          RMDupper.queueOrOutput (outputSam, recordBuffer, discardSet, curr);
       }
       while (recordBuffer.size() > 0) {
         outputSam.addAlignment(recordBuffer.poll().right);
@@ -36,10 +38,11 @@ public class ForwardRMDupperTest extends AbstractTest {
 
   @Test
   public void   queueOrOutput_nextAlignmentStartBeyondFirstEndTriggersCheckForDuplication_post () throws IOException {
+      Set<String> discardSet = new HashSet<String>();
       Iterator it = inputSam.iterator();
       while (it.hasNext()) {
           SAMRecord curr = (SAMRecord) it.next();
-          RMDupper.queueOrOutput (outputSam, recordBuffer, curr);
+          RMDupper.queueOrOutput (outputSam, recordBuffer, discardSet, curr);
       }
       while (recordBuffer.size() > 0) {
         outputSam.addAlignment(recordBuffer.poll().right);

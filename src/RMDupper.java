@@ -194,7 +194,7 @@ public class RMDupper{
      */
     public void readSAMFile() {
         ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer = new ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>>(1000);
-
+        Set<String> discardSet = new HashSet<String>(1000);
         String referenceName = SAMRecord.NO_ALIGNMENT_REFERENCE_NAME;
         Iterator it = inputSam.iterator();
         while (it.hasNext()) {
@@ -203,10 +203,10 @@ public class RMDupper{
                 this.outputSam.addAlignment(curr);
             } else {
                 if ( referenceName == curr.getReferenceName() ) {
-                    queueOrOutput (this.outputSam, recordBuffer, curr);
+                    queueOrOutput (this.outputSam, recordBuffer, discardSet, curr);
                 } else {
-                    flushQueue (this.outputSam, recordBuffer);
-                    queueOrOutput (this.outputSam, recordBuffer, curr);
+                    flushQueue (this.outputSam, recordBuffer, discardSet);
+                    queueOrOutput (this.outputSam, recordBuffer, discardSet, curr);
                     referenceName = curr.getReferenceName();
                 }
             }
@@ -216,63 +216,66 @@ public class RMDupper{
                 System.err.println("Reads treated: " + total);
             }
         }
-        flushQueue(this.outputSam, recordBuffer);
+        flushQueue(this.outputSam, recordBuffer, discardSet);
     }
 
-    public static void queueOrOutput (SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, SAMRecord curr) {
+    public static void queueOrOutput (SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet, SAMRecord curr) {
         //Don't do anything with unmapped reads, just write them into the output!
         if (curr.getReadUnmappedFlag() || curr.getMappingQuality() == 0) {
           outputSam.addAlignment(curr);
         } else {
             if ( recordBuffer.size() > 0 && recordBuffer.peekFirst().middle < curr.getAlignmentStart() ) {
-                checkForDuplication(outputSam, recordBuffer);
+                checkForDuplication(outputSam, recordBuffer, discardSet);
             }
             recordBuffer.add (new ImmutableTriple<Integer, Integer, SAMRecord>(curr.getAlignmentStart(), curr.getAlignmentEnd(), curr));
         }
     }
 
-    public static void flushQueue (SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer) {
-        checkForDuplication (outputSam, recordBuffer);
+    public static void flushQueue (SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
+        checkForDuplication (outputSam, recordBuffer, discardSet);
     }
 
-    public static void checkForDuplication (SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer) {
-        PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getMiddle));
-        while ( recordBuffer.size() > 0 ) {
-            // Fill duplicateBuffer with alignments from the queue that have the same start
-            while ( recordBuffer.size() > 0 && (duplicateBuffer.isEmpty() || duplicateBuffer.peek().left.equals(recordBuffer.peekFirst().left) ) ) {
-                duplicateBuffer.add(recordBuffer.poll());
-            }
-            /* DEBUG
-            System.out.println ("duplicateBuffer");
-            ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> sortedDuplicateBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(duplicateBuffer.size());
-            Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> it = duplicateBuffer.iterator();
-            while (it.hasNext()) {
-                sortedDuplicateBuffer.add(it.next());
-            }
-            sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getMiddle));
+    public static void checkForDuplication (SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
+        // At this point recordBuffer contains all alignments that overlap with its first entry
+        // Therefore the task here is to de-duplicate for the first entry in recordBuffer
 
-            for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
-                System.out.println("dbe: "+currTriple);
-            }
-            END DEBUG */
+        PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, new SAMRecordQualityComparator()));
+        System.out.println("recordBuffer:");
+        Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> it = recordBuffer.iterator();
+        while (it.hasNext()) {
+          ImmutableTriple<Integer, Integer, SAMRecord> maybeDuplicate = it.next();
+          System.out.println("recordBuffer maybeDuplicate: "+maybeDuplicate);
+          if ( maybeDuplicate.right.getReadName().startsWith("M_") &&
+               ( recordBuffer.peekFirst().left.equals(maybeDuplicate.left)  ||
+                 recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle)  ) ) {
+                   System.out.println("M_ add");
+             duplicateBuffer.add(maybeDuplicate);
+          } else if ( maybeDuplicate.right.getReadName().startsWith("F_") &&
+                    maybeDuplicate.left == recordBuffer.peekFirst().left) {
+                      System.out.println("F_ add");
+             duplicateBuffer.add(maybeDuplicate);
+          } else if ( maybeDuplicate.right.getReadName().startsWith("R_") &&
+          maybeDuplicate.middle == recordBuffer.peekFirst().middle  ) {
+            System.out.println("R_ add");
+             duplicateBuffer.add(maybeDuplicate);
+          }
+          }
+        /* DEBUG */
+System.out.println ("duplicateBuffer");
+ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> sortedDuplicateBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(duplicateBuffer.size());
+Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> dit = duplicateBuffer.iterator();
+while (dit.hasNext()) {
+    sortedDuplicateBuffer.add(dit.next());
+}
+sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getMiddle));
 
-            Set<String> duplicateSet = new HashSet<String>();
-            if ( duplicateBuffer.size() > 1 ) {
-                resolveDuplicates(duplicateSet, duplicateBuffer);
-                resolveDuplicatesStartOnly(duplicateSet, duplicateBuffer);
-            }
-            //System.out.println("duplicateSet:");
-            //System.out.println(duplicateSet);
+for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
+    System.out.println("dbe: "+currTriple);
+}
+/* END DEBUG */
 
-            while ( duplicateBuffer.size() > 0 ) {
-                ImmutableTriple<Integer, Integer, SAMRecord> pollTriple = duplicateBuffer.poll();
-                if ( !duplicateSet.contains(pollTriple.right.getReadName()) ) {
-                    //System.out.println ("kept"+pollTriple);
-                    outputSam.addAlignment(pollTriple.right);
-                }
-            }
-            duplicateSet.clear();
-        }
+  outputSam.addAlignment(duplicateBuffer.poll().right);
+
     }
 
     private static void resolveDuplicates(Set<String> duplicateSet, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer) {
