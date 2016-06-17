@@ -232,7 +232,12 @@ public class RMDupper{
     }
 
     public static void flushQueue (SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
-        checkForDuplication (outputSam, recordBuffer, discardSet);
+        System.out.println("Check for duplication from flushQueue");
+        while ( !recordBuffer.isEmpty() ) {
+            checkForDuplication (outputSam, recordBuffer, discardSet);
+        }
+        System.out.println("discardSet afte flushQueue: "+discardSet);
+        discardSet.clear();
     }
 
     public static void checkForDuplication (SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
@@ -251,14 +256,14 @@ public class RMDupper{
                    System.out.println("M_ add");
              duplicateBuffer.add(maybeDuplicate);
           } else if ( maybeDuplicate.right.getReadName().startsWith("F_") &&
-                    maybeDuplicate.left == recordBuffer.peekFirst().left) {
+                    recordBuffer.peekFirst().left.equals(maybeDuplicate.left) ) {
                       System.out.println("F_ add");
              duplicateBuffer.add(maybeDuplicate);
           } else if ( maybeDuplicate.right.getReadName().startsWith("R_") &&
-          maybeDuplicate.middle == recordBuffer.peekFirst().middle  ) {
+          recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle)  ) {
             System.out.println("R_ add");
              duplicateBuffer.add(maybeDuplicate);
-          }
+          } else { System.out.println("Missed"); }
           }
         /* DEBUG */
 System.out.println ("duplicateBuffer");
@@ -274,14 +279,16 @@ for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateB
 }
 /* END DEBUG */
   //discardSet.add(duplicateBuffer.peek().right.getReadName());
-  outputSam.addAlignment(duplicateBuffer.peek().right);
+  if ( !duplicateBuffer.isEmpty() ) {
+    outputSam.addAlignment(duplicateBuffer.peek().right);
+  }
   while ( !duplicateBuffer.isEmpty() ) {
     discardSet.add(duplicateBuffer.poll().right.getReadName());
   }
     System.out.println("discardSet: "+discardSet);
     System.out.println("first recordBuffer: "+recordBuffer.peekFirst());
     // Maintain the invariant that the first item in recordBuffer may have duplicates
-    while ( discardSet.contains(recordBuffer.peekFirst().right.getReadName()) ) {
+    while ( !recordBuffer.isEmpty() && discardSet.contains(recordBuffer.peekFirst().right.getReadName()) ) {
       discardSet.remove(recordBuffer.poll().right.getReadName());
     }
     System.out.println("discardSet: "+discardSet);
