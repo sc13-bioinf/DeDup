@@ -4,12 +4,6 @@ import org.junit.Test;
 
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
-import java.io.PrintStream;
 import java.io.IOException;
 
 public class ForwardTest extends AbstractTest {

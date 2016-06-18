@@ -278,7 +278,7 @@ while (dit.hasNext()) {
 sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getMiddle));
 
 for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
-    System.out.println("dbe: "+currTriple);
+    System.out.println("dbe: "+currTriple+" "+SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
 }
 /* END DEBUG */
   //discardSet.add(duplicateBuffer.peek().right.getReadName());
@@ -297,89 +297,6 @@ for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateB
     System.out.println("discardSet: "+discardSet);
     System.out.println("first recordBuffer: "+recordBuffer.peekFirst());
 
-    }
-
-    private static void resolveDuplicates(Set<String> duplicateSet, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer) {
-        //System.out.println ("resolveDuplicates");
-        ImmutableTriple<Integer, Integer, SAMRecord> bestTriple = duplicateBuffer.peek();
-
-        ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> sortedDuplicateBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(duplicateBuffer.size());
-        Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> it = duplicateBuffer.iterator();
-        while (it.hasNext()) {
-          sortedDuplicateBuffer.add(it.next());
-        }
-        sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getMiddle));
-
-        for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
-            System.out.println("bestTriple: "+bestTriple.right.getReadName()+" qual: "+getQualityScore(bestTriple.right.getBaseQualityString()));
-            duplicateSet.add(currTriple.right.getReadName());
-            if ( bestTriple.middle.equals(currTriple.middle) ) {
-                bestTriple = resolveDuplicate(bestTriple, currTriple);
-            } else {
-                duplicateSet.remove(bestTriple.right.getReadName());
-                bestTriple = currTriple;
-            }
-        }
-        System.out.println("bestTriple: "+bestTriple.right.getReadName()+" qual: "+getQualityScore(bestTriple.right.getBaseQualityString()));
-        duplicateSet.remove(bestTriple.right.getReadName());
-    }
-
-    private static ImmutableTriple<Integer, Integer, SAMRecord> resolveDuplicate(ImmutableTriple<Integer, Integer, SAMRecord> bestTriple, ImmutableTriple<Integer, Integer, SAMRecord> currTriple) {
-        if ( getQualityScore(currTriple.right.getBaseQualityString()) > getQualityScore(bestTriple.right.getBaseQualityString()) ) {
-            return currTriple;
-        }
-        else if ( getQualityScore(currTriple.right.getBaseQualityString()) == getQualityScore(bestTriple.right.getBaseQualityString()) ) {
-            if ( currTriple.right.getReadName().startsWith("M_") ) {
-                return currTriple;
-            } else {
-                return bestTriple;
-            }
-        }
-        else {
-            return bestTriple;
-        }
-    }
-
-    private static void resolveDuplicatesStartOnly(Set<String> duplicateSet, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer) {
-
-        ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> sortedDuplicateBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(duplicateBuffer.size());
-        Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> it = duplicateBuffer.iterator();
-        while (it.hasNext()) {
-            ImmutableTriple<Integer, Integer, SAMRecord> currTriple = it.next();
-            if ( currTriple.right.getReadName().startsWith("F_") )
-            {
-                sortedDuplicateBuffer.add(currTriple);
-            }
-        }
-        sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getMiddle));
-
-        if ( sortedDuplicateBuffer.size() > 1 ) {
-            ImmutableTriple<Integer, Integer, SAMRecord> bestTriple = sortedDuplicateBuffer.get(0);
-            for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
-                if ( getQualityScore(currTriple.right.getBaseQualityString()) > getQualityScore(bestTriple.right.getBaseQualityString()) ) {
-                    bestTriple = currTriple;
-                }
-            }
-            for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
-                if ( !currTriple.right.getReadName().equals(bestTriple.right.getReadName()) ) {
-                    duplicateSet.add(currTriple.right.getReadName());
-                }
-            }
-        }
-    }
-
-    /**
-     * Sums up the quality score of a given quality string in FastQ/SAM format
-     *
-     * @param s
-     * @return the quality score of a string S
-     */
-    private static int getQualityScore(String s) {
-        int result = 0;
-        for (Character c : s.toCharArray()) {
-            result += (int) c;
-        }
-        return result;
     }
 
     public void finish () throws IOException {

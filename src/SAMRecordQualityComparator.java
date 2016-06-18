@@ -10,7 +10,13 @@ public class SAMRecordQualityComparator implements Comparator<SAMRecord> {
            int sb = getQualityScore(b.getBaseQualityString());
            return sa < sb ? -1 : ( sa == sb ? 0 : 1);
        }
-       private static int getQualityScore(String s) {
+       /**
+        * Sums up the quality score of a given quality string in FastQ/SAM format
+        *
+        * @param s
+        * @return the quality score of a string S
+        */
+       public static int getQualityScore(String s) {
            int result = 0;
            for (Character c : s.toCharArray()) {
                result += (int) c;
