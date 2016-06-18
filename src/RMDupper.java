@@ -250,17 +250,20 @@ public class RMDupper{
         while (it.hasNext()) {
           ImmutableTriple<Integer, Integer, SAMRecord> maybeDuplicate = it.next();
           System.out.println("recordBuffer maybeDuplicate: "+maybeDuplicate);
-          if ( maybeDuplicate.right.getReadName().startsWith("M_") &&
-               ( recordBuffer.peekFirst().left.equals(maybeDuplicate.left)  ||
-                 recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle)  ) ) {
+          if ( recordBuffer.peekFirst().right.getReadName().startsWith("M_") &&
+                maybeDuplicate.right.getReadName().startsWith("M_") &&
+                recordBuffer.peekFirst().left.equals(maybeDuplicate.left)  &&
+                recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) {
                    System.out.println("M_ add");
              duplicateBuffer.add(maybeDuplicate);
-          } else if ( maybeDuplicate.right.getReadName().startsWith("F_") &&
-                    recordBuffer.peekFirst().left.equals(maybeDuplicate.left) ) {
+          } else if ( ( recordBuffer.peekFirst().right.getReadName().startsWith("F_") ||
+                        maybeDuplicate.right.getReadName().startsWith("F_") ) &&
+                      recordBuffer.peekFirst().left.equals(maybeDuplicate.left) ) {
                       System.out.println("F_ add");
              duplicateBuffer.add(maybeDuplicate);
-          } else if ( maybeDuplicate.right.getReadName().startsWith("R_") &&
-          recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle)  ) {
+          } else if ( ( recordBuffer.peekFirst().right.getReadName().startsWith("R_") ||
+                        maybeDuplicate.right.getReadName().startsWith("R_") ) &&
+                      recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle)  ) {
             System.out.println("R_ add");
              duplicateBuffer.add(maybeDuplicate);
           } else { System.out.println("Missed"); }
