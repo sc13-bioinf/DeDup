@@ -258,7 +258,8 @@ public class RMDupper{
                    //System.out.println("M_ add");
              duplicateBuffer.add(maybeDuplicate);
           } else if ( ( recordBuffer.peekFirst().right.getReadName().startsWith("F_") ||
-                        maybeDuplicate.right.getReadName().startsWith("F_") ) &&
+                        ( maybeDuplicate.right.getReadName().startsWith("F_") &&
+                          maybeDuplicate.middle - maybeDuplicate.left <= recordBuffer.peekFirst().middle - recordBuffer.peekFirst().left ) ) &&
                       recordBuffer.peekFirst().left.equals(maybeDuplicate.left) ) {
                       //System.out.println("F_ add");
              duplicateBuffer.add(maybeDuplicate);
