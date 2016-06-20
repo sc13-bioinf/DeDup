@@ -246,6 +246,7 @@ public class RMDupper{
 
         PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, new SAMRecordQualityComparator().reversed()));
         System.out.println("recordBuffer:");
+        System.out.println("peekfirst: "+recordBuffer.peekFirst());
         Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> it = recordBuffer.iterator();
         while (it.hasNext()) {
           ImmutableTriple<Integer, Integer, SAMRecord> maybeDuplicate = it.next();
@@ -254,20 +255,24 @@ public class RMDupper{
                 maybeDuplicate.right.getReadName().startsWith("M_") &&
                 recordBuffer.peekFirst().left.equals(maybeDuplicate.left)  &&
                 recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) {
-                   System.out.println("M_ add");
+                   //System.out.println("M_ add");
              duplicateBuffer.add(maybeDuplicate);
           } else if ( ( recordBuffer.peekFirst().right.getReadName().startsWith("F_") ||
                         maybeDuplicate.right.getReadName().startsWith("F_") ) &&
                       recordBuffer.peekFirst().left.equals(maybeDuplicate.left) ) {
-                      System.out.println("F_ add");
+                      //System.out.println("F_ add");
              duplicateBuffer.add(maybeDuplicate);
           } else if ( ( recordBuffer.peekFirst().right.getReadName().startsWith("R_") ||
                         maybeDuplicate.right.getReadName().startsWith("R_") ) &&
                       recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle)  ) {
-            System.out.println("R_ add");
+            //System.out.println("R_ add");
              duplicateBuffer.add(maybeDuplicate);
-          } else { System.out.println("Missed"); }
+          } else { //System.out.println("Missed");
+                   //System.out.println("peekFirst "+recordBuffer.peekFirst());
+                   //System.out.println("maybeDuplicate "+maybeDuplicate); }
+                   int i = 0;
           }
+        }
         /* DEBUG */
 System.out.println ("duplicateBuffer");
 ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> sortedDuplicateBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(duplicateBuffer.size());
@@ -280,9 +285,17 @@ sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer
 for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
     System.out.println("dbe: "+currTriple+" "+SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
 }
+
+// Sort again with priority queue order
+sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, new SAMRecordQualityComparator().reversed()));
+for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
+    System.out.println("sdbe: "+currTriple+" "+SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
+}
+
 /* END DEBUG */
   //discardSet.add(duplicateBuffer.peek().right.getReadName());
-  if ( !duplicateBuffer.isEmpty() ) {
+  if ( !duplicateBuffer.isEmpty() && !discardSet.contains(duplicateBuffer.peek().right.getReadName()) ) {
+    System.out.println("WRITE "+duplicateBuffer.peek());
     outputSam.addAlignment(duplicateBuffer.peek().right);
   }
   while ( !duplicateBuffer.isEmpty() ) {
