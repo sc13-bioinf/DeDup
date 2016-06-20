@@ -26,7 +26,6 @@ public class YieldTest extends AbstractTest {
         rmdup.finish();
         copier.start();
         Set<String> observedReadNames = Utils.getReadNamesFromSAM(inFromResult).stream().collect(Collectors.toSet());
-        observedReadNames.forEach(System.out::println);
         assertEquals(Data.RMDupperTest__resolveDuplicate_yields_best_quality_expectedReadNames, observedReadNames);
     }
 }

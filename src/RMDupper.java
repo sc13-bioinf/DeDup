@@ -232,11 +232,9 @@ public class RMDupper{
     }
 
     public static void flushQueue (SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
-        System.out.println("Check for duplication from flushQueue");
         while ( !recordBuffer.isEmpty() ) {
             checkForDuplication (outputSam, recordBuffer, discardSet);
         }
-        System.out.println("discardSet afte flushQueue: "+discardSet);
         discardSet.clear();
     }
 
@@ -245,12 +243,9 @@ public class RMDupper{
         // Therefore the task here is to de-duplicate for the first entry in recordBuffer
 
         PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, new SAMRecordQualityComparator().reversed()));
-        System.out.println("recordBuffer:");
-        System.out.println("peekfirst: "+recordBuffer.peekFirst());
         Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> it = recordBuffer.iterator();
         while (it.hasNext()) {
           ImmutableTriple<Integer, Integer, SAMRecord> maybeDuplicate = it.next();
-          System.out.println("recordBuffer maybeDuplicate: "+maybeDuplicate);
           boolean duplicateIsShorterOrEqual = maybeDuplicate.middle - maybeDuplicate.left <= recordBuffer.peekFirst().middle - recordBuffer.peekFirst().left;
           boolean duplicateIsLongerOrEqual = recordBuffer.peekFirst().middle - recordBuffer.peekFirst().left <= maybeDuplicate.middle - maybeDuplicate.left;
 
@@ -288,13 +283,9 @@ public class RMDupper{
                           recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) ) ) {
             //System.out.println("R_ add");
              duplicateBuffer.add(maybeDuplicate);
-          } else { //System.out.println("Missed");
-                   //System.out.println("peekFirst "+recordBuffer.peekFirst());
-                   //System.out.println("maybeDuplicate "+maybeDuplicate); }
-                   int i = 0;
           }
         }
-        /* DEBUG */
+        /* DEBUG
 System.out.println ("duplicateBuffer");
 ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> sortedDuplicateBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(duplicateBuffer.size());
 Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> dit = duplicateBuffer.iterator();
@@ -313,24 +304,19 @@ for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateB
     System.out.println("sdbe: "+currTriple+" "+SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
 }
 
-/* END DEBUG */
-  //discardSet.add(duplicateBuffer.peek().right.getReadName());
-  if ( !duplicateBuffer.isEmpty() && !discardSet.contains(duplicateBuffer.peek().right.getReadName()) ) {
-    System.out.println("WRITE "+duplicateBuffer.peek());
-    outputSam.addAlignment(duplicateBuffer.peek().right);
-  }
-  while ( !duplicateBuffer.isEmpty() ) {
-    discardSet.add(duplicateBuffer.poll().right.getReadName());
-  }
-    System.out.println("discardSet: "+discardSet);
-    System.out.println("first recordBuffer: "+recordBuffer.peekFirst());
-    // Maintain the invariant that the first item in recordBuffer may have duplicates
-    while ( !recordBuffer.isEmpty() && discardSet.contains(recordBuffer.peekFirst().right.getReadName()) ) {
-      discardSet.remove(recordBuffer.poll().right.getReadName());
-    }
-    System.out.println("discardSet: "+discardSet);
-    System.out.println("first recordBuffer: "+recordBuffer.peekFirst());
-
+END DEBUG */
+       //discardSet.add(duplicateBuffer.peek().right.getReadName());
+       if ( !duplicateBuffer.isEmpty() && !discardSet.contains(duplicateBuffer.peek().right.getReadName()) ) {
+         //System.out.println("WRITE "+duplicateBuffer.peek());
+         outputSam.addAlignment(duplicateBuffer.peek().right);
+       }
+       while ( !duplicateBuffer.isEmpty() ) {
+         discardSet.add(duplicateBuffer.poll().right.getReadName());
+       }
+       // Maintain the invariant that the first item in recordBuffer may have duplicates
+       while ( !recordBuffer.isEmpty() && discardSet.contains(recordBuffer.peekFirst().right.getReadName()) ) {
+         discardSet.remove(recordBuffer.poll().right.getReadName());
+       }
     }
 
     public void finish () throws IOException {
