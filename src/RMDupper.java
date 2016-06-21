@@ -55,10 +55,6 @@ public class RMDupper{
     private final SAMFileWriter outputSam;
     private final DupStats dupStats = new DupStats();
     private OccurenceCounterMerged oc = new OccurenceCounterMerged();
-    private OccurenceCounterSingle ocunmerged = new OccurenceCounterSingle();
-
-
-
 
     public RMDupper(File inputFile, File outputFile) {
         inputSam = SamReaderFactory.make().enable(SamReaderFactory.Option.DONT_MEMORY_MAP_INDEX).validationStringency(ValidationStringency.LENIENT).open(inputFile);
@@ -201,10 +197,10 @@ public class RMDupper{
                 this.outputSam.addAlignment(curr);
             } else {
                 if ( referenceName == curr.getReferenceName() ) {
-                    queueOrOutput (this.dupStats, this.outputSam, recordBuffer, discardSet, curr);
+                    queueOrOutput (this.dupStats, this.oc, this.outputSam, recordBuffer, discardSet, curr);
                 } else {
-                    flushQueue (this.dupStats, this.outputSam, recordBuffer, discardSet);
-                    queueOrOutput (this.dupStats, this.outputSam, recordBuffer, discardSet, curr);
+                    flushQueue (this.dupStats, this.oc, this.outputSam, recordBuffer, discardSet);
+                    queueOrOutput (this.dupStats, this.oc, this.outputSam, recordBuffer, discardSet, curr);
                     referenceName = curr.getReferenceName();
                 }
             }
@@ -214,29 +210,29 @@ public class RMDupper{
                 System.err.println("Reads treated: " + this.dupStats.total);
             }
         }
-        flushQueue(this.dupStats, this.outputSam, recordBuffer, discardSet);
+        flushQueue(this.dupStats, this.oc, this.outputSam, recordBuffer, discardSet);
     }
 
-    public static void queueOrOutput (DupStats dupStats, SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet, SAMRecord curr) {
+    public static void queueOrOutput (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet, SAMRecord curr) {
         //Don't do anything with unmapped reads, just write them into the output!
         if (curr.getReadUnmappedFlag() || curr.getMappingQuality() == 0) {
           outputSam.addAlignment(curr);
         } else {
             if ( recordBuffer.size() > 0 && recordBuffer.peekFirst().middle < curr.getAlignmentStart() ) {
-                checkForDuplication(dupStats, outputSam, recordBuffer, discardSet);
+                checkForDuplication(dupStats, occurenceCounterMerged, outputSam, recordBuffer, discardSet);
             }
             recordBuffer.add (new ImmutableTriple<Integer, Integer, SAMRecord>(curr.getAlignmentStart(), curr.getAlignmentEnd(), curr));
         }
     }
 
-    public static void flushQueue (DupStats dupStats, SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
+    public static void flushQueue (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
         while ( !recordBuffer.isEmpty() ) {
-            checkForDuplication (dupStats, outputSam, recordBuffer, discardSet);
+            checkForDuplication (dupStats, occurenceCounterMerged, outputSam, recordBuffer, discardSet);
         }
         discardSet.clear();
     }
 
-    public static void checkForDuplication (DupStats dupStats, SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
+    public static void checkForDuplication (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
         // At this point recordBuffer contains all alignments that overlap with its first entry
         // Therefore the task here is to de-duplicate for the first entry in recordBuffer
 
@@ -307,6 +303,7 @@ END DEBUG */
        if ( !duplicateBuffer.isEmpty() && !discardSet.contains(duplicateBuffer.peek().right.getReadName()) ) {
          //System.out.println("WRITE "+duplicateBuffer.peek());
          decrementDuplicateStats(dupStats, duplicateBuffer.peek().right.getReadName());
+         occurenceCounterMerged.putValue(Long.valueOf(duplicateBuffer.stream().filter(d -> d.right.getReadName().startsWith("M_")).count()).intValue() - 1);
          outputSam.addAlignment(duplicateBuffer.peek().right);
        }
        while ( !duplicateBuffer.isEmpty() ) {

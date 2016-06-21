@@ -17,16 +17,13 @@
 package datastructure;
 
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Created by peltzer on 16/09/15.
  */
 public class OccurenceCounterMerged {
-
-    private int currPosition = 0;
     /**
      * Occurence should follow a simple distribution in general
      * |
@@ -42,43 +39,32 @@ public class OccurenceCounterMerged {
      * n_i+1 > n_i.
      */
 
-    private HashMap<DedupStore, Integer> occurencyHashMap;
+    private HashMap<Integer, Integer> occurencyHashMap;
 
     public OccurenceCounterMerged() {
-        this.occurencyHashMap = new HashMap<>();
+        this.occurencyHashMap = new HashMap<Integer, Integer>();
     }
 
-    public void putValue(DedupStore key) {
-        if (occurencyHashMap.containsKey(key)) {
-            occurencyHashMap.put(key, occurencyHashMap.get(key) + 1);
+    public void putValue(Integer numberOfDuplicates) {
+        if (occurencyHashMap.containsKey(numberOfDuplicates)) {
+            occurencyHashMap.put(numberOfDuplicates, occurencyHashMap.get(numberOfDuplicates) + 1);
         } else {
-            occurencyHashMap.put(key, 1);
+            occurencyHashMap.put(numberOfDuplicates, 1);
         }
     }
 
 
     public String getHistogram() {
-        String buffer = "";
-        //Key == number of occurences, Value = occurences
-        Map<Integer, Integer> results = new TreeMap<>();
-        Iterator iter = occurencyHashMap.values().iterator();
-        while ((iter.hasNext())) {
-            int x = (Integer) iter.next();
-            if (results.containsKey(x)) {
-                results.put(x, results.get(x) + 1);
-            } else {
-                results.put(x, 1);
-            }
+        StringBuilder buffer = new StringBuilder();
+        Integer[] sortedOccurences = this.occurencyHashMap.keySet().toArray(new Integer[this.occurencyHashMap.size()]);
+        Arrays.sort(sortedOccurences);
+        //List<Integer> sortedOccurences = this.occurencyHashMap.keySet().toArray(new Integer[this.occurencyHashMap.size()]);
+        if ( !this.occurencyHashMap.isEmpty() ) {
+          for (int count = 1; count <= sortedOccurences[sortedOccurences.length -1];count++) {
+              buffer.append("" + count + "\t" + (this.occurencyHashMap.containsKey(count) ? this.occurencyHashMap.get(count) : 0) + "\n");
+          }
         }
-
-
-        Iterator iter2 = results.values().iterator();
-        int count = 1;
-        while ((iter2.hasNext())) {
-            buffer = buffer + count + "\t" + iter2.next() + "\n";
-            count++;
-        }
-        return buffer;
+        return buffer.toString();
     }
 
 
