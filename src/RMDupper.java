@@ -30,6 +30,7 @@ import java.io.File;
 import datastructure.DedupStore;
 import datastructure.OccurenceCounterMerged;
 import datastructure.OccurenceCounterSingle;
+import datastructure.DupStats;
 
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
@@ -52,10 +53,7 @@ public class RMDupper{
 
     private final SamReader inputSam;
     private final SAMFileWriter outputSam;
-    private int total = 0;
-    private int removed_reverse = 0;
-    private int removed_forward = 0;
-    private int removed_merged = 0;
+    private final DupStats dupStats = new DupStats();
     private OccurenceCounterMerged oc = new OccurenceCounterMerged();
     private OccurenceCounterSingle ocunmerged = new OccurenceCounterSingle();
 
@@ -117,16 +115,16 @@ public class RMDupper{
         if (pipe) {
             RMDupper rmdup = new RMDupper(System.in, System.out);
             rmdup.readSAMFile();
-            System.out.println("Total reads: " + rmdup.total + "\n");
-            System.out.println("Reverse removed: " + rmdup.removed_reverse + "\n");
-            System.out.println("Forward removed: " + rmdup.removed_forward + "\n");
-            System.out.println("Merged removed: " + rmdup.removed_merged + "\n");
-            System.out.println("Total removed: " + (rmdup.removed_forward + rmdup.removed_merged
-                    + rmdup.removed_reverse) + "\n");
-            if (rmdup.removed_merged + rmdup.removed_forward + rmdup.removed_reverse == 0) {
+            System.out.println("Total reads: " + rmdup.dupStats.total + "\n");
+            System.out.println("Reverse removed: " + rmdup.dupStats.removed_reverse + "\n");
+            System.out.println("Forward removed: " + rmdup.dupStats.removed_forward + "\n");
+            System.out.println("Merged removed: " + rmdup.dupStats.removed_merged + "\n");
+            System.out.println("Total removed: " + (rmdup.dupStats.removed_forward + rmdup.dupStats.removed_merged
+                    + rmdup.dupStats.removed_reverse) + "\n");
+            if (rmdup.dupStats.removed_merged + rmdup.dupStats.removed_forward + rmdup.dupStats.removed_reverse == 0) {
                 System.out.println("Duplication Rate: " + df.format(0.00));
             } else {
-                System.out.println("Duplication Rate: " + df.format((double) (rmdup.removed_merged + rmdup.removed_reverse + rmdup.removed_forward) / (double) rmdup.total));
+                System.out.println("Duplication Rate: " + df.format((double) (rmdup.dupStats.removed_merged + rmdup.dupStats.removed_reverse + rmdup.dupStats.removed_forward) / (double) rmdup.dupStats.total));
             }
         } else {
             if (outputpath.length() == 0) {
@@ -156,13 +154,13 @@ public class RMDupper{
                 rmdup.inputSam.close();
                 rmdup.outputSam.close();
 
-                bfw.write("Total reads: " + rmdup.total + "\n");
-                bfw.write("Reverse removed: " + rmdup.removed_reverse + "\n");
-                bfw.write("Forward removed: " + rmdup.removed_forward + "\n");
-                bfw.write("Merged removed: " + rmdup.removed_merged + "\n");
-                bfw.write("Total removed: " + (rmdup.removed_forward + rmdup.removed_merged
-                    + rmdup.removed_reverse) + "\n");
-                bfw.write("Duplication Rate: " + df.format((double) (rmdup.removed_merged + rmdup.removed_reverse + rmdup.removed_forward) / (double) rmdup.total));
+                bfw.write("Total reads: " + rmdup.dupStats.total + "\n");
+                bfw.write("Reverse removed: " + rmdup.dupStats.removed_reverse + "\n");
+                bfw.write("Forward removed: " + rmdup.dupStats.removed_forward + "\n");
+                bfw.write("Merged removed: " + rmdup.dupStats.removed_merged + "\n");
+                bfw.write("Total removed: " + (rmdup.dupStats.removed_forward + rmdup.dupStats.removed_merged
+                    + rmdup.dupStats.removed_reverse) + "\n");
+                bfw.write("Duplication Rate: " + df.format((double) (rmdup.dupStats.removed_merged + rmdup.dupStats.removed_reverse + rmdup.dupStats.removed_forward) / (double) rmdup.dupStats.total));
                 bfw.flush();
                 bfw.close();
 
@@ -171,15 +169,15 @@ public class RMDupper{
                 histbfw.close();
 
 
-                System.out.println("Total reads: " + rmdup.total + "\n");
-                System.out.println("Unmerged removed: " + rmdup.removed_forward + "\n");
-                System.out.println("Merged removed: " + rmdup.removed_merged + "\n");
-                System.out.println("Total removed: " + (rmdup.removed_forward + rmdup.removed_merged
-                    + rmdup.removed_reverse) + "\n");
-                if (rmdup.removed_merged + rmdup.removed_forward + rmdup.removed_reverse == 0) {
+                System.out.println("Total reads: " + rmdup.dupStats.total + "\n");
+                System.out.println("Unmerged removed: " + (rmdup.dupStats.removed_forward + rmdup.dupStats.removed_reverse) + "\n");
+                System.out.println("Merged removed: " + rmdup.dupStats.removed_merged + "\n");
+                System.out.println("Total removed: " + (rmdup.dupStats.removed_forward + rmdup.dupStats.removed_merged
+                    + rmdup.dupStats.removed_reverse) + "\n");
+                if (rmdup.dupStats.removed_merged + rmdup.dupStats.removed_forward + rmdup.dupStats.removed_reverse == 0) {
                     System.out.println("Duplication Rate: " + df.format(0.00));
                 } else {
-                    System.out.println("Duplication Rate: " + df.format((double) (rmdup.removed_merged + rmdup.removed_reverse + rmdup.removed_forward) / (double) rmdup.total));
+                    System.out.println("Duplication Rate: " + df.format((double) (rmdup.dupStats.removed_merged + rmdup.dupStats.removed_reverse + rmdup.dupStats.removed_forward) / (double) rmdup.dupStats.total));
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -203,42 +201,42 @@ public class RMDupper{
                 this.outputSam.addAlignment(curr);
             } else {
                 if ( referenceName == curr.getReferenceName() ) {
-                    queueOrOutput (this.outputSam, recordBuffer, discardSet, curr);
+                    queueOrOutput (this.dupStats, this.outputSam, recordBuffer, discardSet, curr);
                 } else {
-                    flushQueue (this.outputSam, recordBuffer, discardSet);
-                    queueOrOutput (this.outputSam, recordBuffer, discardSet, curr);
+                    flushQueue (this.dupStats, this.outputSam, recordBuffer, discardSet);
+                    queueOrOutput (this.dupStats, this.outputSam, recordBuffer, discardSet, curr);
                     referenceName = curr.getReferenceName();
                 }
             }
 
-            total++;
-            if(total % 100000 == 0){
-                System.err.println("Reads treated: " + total);
+            this.dupStats.total++;
+            if(this.dupStats.total % 100000 == 0){
+                System.err.println("Reads treated: " + this.dupStats.total);
             }
         }
-        flushQueue(this.outputSam, recordBuffer, discardSet);
+        flushQueue(this.dupStats, this.outputSam, recordBuffer, discardSet);
     }
 
-    public static void queueOrOutput (SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet, SAMRecord curr) {
+    public static void queueOrOutput (DupStats dupStats, SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet, SAMRecord curr) {
         //Don't do anything with unmapped reads, just write them into the output!
         if (curr.getReadUnmappedFlag() || curr.getMappingQuality() == 0) {
           outputSam.addAlignment(curr);
         } else {
             if ( recordBuffer.size() > 0 && recordBuffer.peekFirst().middle < curr.getAlignmentStart() ) {
-                checkForDuplication(outputSam, recordBuffer, discardSet);
+                checkForDuplication(dupStats, outputSam, recordBuffer, discardSet);
             }
             recordBuffer.add (new ImmutableTriple<Integer, Integer, SAMRecord>(curr.getAlignmentStart(), curr.getAlignmentEnd(), curr));
         }
     }
 
-    public static void flushQueue (SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
+    public static void flushQueue (DupStats dupStats, SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
         while ( !recordBuffer.isEmpty() ) {
-            checkForDuplication (outputSam, recordBuffer, discardSet);
+            checkForDuplication (dupStats, outputSam, recordBuffer, discardSet);
         }
         discardSet.clear();
     }
 
-    public static void checkForDuplication (SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
+    public static void checkForDuplication (DupStats dupStats, SAMFileWriter outputSam, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
         // At this point recordBuffer contains all alignments that overlap with its first entry
         // Therefore the task here is to de-duplicate for the first entry in recordBuffer
 
@@ -308,6 +306,7 @@ END DEBUG */
        //discardSet.add(duplicateBuffer.peek().right.getReadName());
        if ( !duplicateBuffer.isEmpty() && !discardSet.contains(duplicateBuffer.peek().right.getReadName()) ) {
          //System.out.println("WRITE "+duplicateBuffer.peek());
+         decrementDuplicateStats(dupStats, duplicateBuffer.peek().right.getReadName());
          outputSam.addAlignment(duplicateBuffer.peek().right);
        }
        while ( !duplicateBuffer.isEmpty() ) {
@@ -315,12 +314,34 @@ END DEBUG */
        }
        // Maintain the invariant that the first item in recordBuffer may have duplicates
        while ( !recordBuffer.isEmpty() && discardSet.contains(recordBuffer.peekFirst().right.getReadName()) ) {
-         discardSet.remove(recordBuffer.poll().right.getReadName());
+         String duplicateReadName = recordBuffer.poll().right.getReadName();
+         incrementDuplicateStats(dupStats, duplicateReadName);
+         discardSet.remove(duplicateReadName);
        }
     }
 
     public void finish () throws IOException {
         this.inputSam.close();
         this.outputSam.close();
+    }
+
+    public static void incrementDuplicateStats (DupStats dupStats, String readName) {
+      if ( readName.startsWith("M_") ) {
+        dupStats.removed_merged++;
+      } else if ( readName.startsWith("F_") ) {
+        dupStats.removed_forward++;
+      } else if ( readName.startsWith("R_") ) {
+        dupStats.removed_reverse++;
+      }
+    }
+
+    public static void decrementDuplicateStats (DupStats dupStats, String readName) {
+      if ( readName.startsWith("M_") ) {
+        dupStats.removed_merged--;
+      } else if ( readName.startsWith("F_") ) {
+        dupStats.removed_forward--;
+      } else if ( readName.startsWith("R_") ) {
+        dupStats.removed_reverse--;
+      }
     }
 }
