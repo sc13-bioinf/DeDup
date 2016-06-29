@@ -60,8 +60,8 @@ public class OccurenceCounterMerged {
         Arrays.sort(sortedOccurences);
         //List<Integer> sortedOccurences = this.occurencyHashMap.keySet().toArray(new Integer[this.occurencyHashMap.size()]);
         if ( !this.occurencyHashMap.isEmpty() ) {
-          for (int count = 1; count <= sortedOccurences[sortedOccurences.length -1];count++) {
-              buffer.append("" + count + "\t" + (this.occurencyHashMap.containsKey(count) ? this.occurencyHashMap.get(count) : 0) + "\n");
+          for (int count = 0; count <= sortedOccurences[sortedOccurences.length -1];count++) {
+              buffer.append("" + (count + 1) + "\t" + (this.occurencyHashMap.containsKey(count) ? this.occurencyHashMap.get(count) : 0) + "\n");
           }
         }
         return buffer.toString();

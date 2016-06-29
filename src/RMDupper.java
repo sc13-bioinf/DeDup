@@ -49,7 +49,7 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
  */
 public class RMDupper{
     private static final String CLASS_NAME = "dedup";
-    private static final String VERSION = "0.10.0";
+    private static final String VERSION = "0.10.2";
 
     private final SamReader inputSam;
     private final SAMFileWriter outputSam;
