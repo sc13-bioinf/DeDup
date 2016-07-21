@@ -49,7 +49,7 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
  */
 public class RMDupper{
     private static final String CLASS_NAME = "dedup";
-    private static final String VERSION = "0.11.0";
+    private static final String VERSION = "0.11.1";
 
     private final Boolean allReadsAsMerged;
     private final SamReader inputSam;
@@ -327,7 +327,7 @@ END DEBUG */
        //discardSet.add(duplicateBuffer.peek().right.getReadName());
        if ( !duplicateBuffer.isEmpty() && !discardSet.contains(duplicateBuffer.peek().right.getReadName()) ) {
          //System.out.println("WRITE "+duplicateBuffer.peek());
-         decrementDuplicateStats(dupStats, duplicateBuffer.peek().right.getReadName());
+         decrementDuplicateStats(dupStats, allReadsAsMerged, duplicateBuffer.peek().right.getReadName());
          occurenceCounterMerged.putValue(Long.valueOf(duplicateBuffer.stream().filter(d -> d.right.getReadName().startsWith("M_")).count()).intValue() - 1);
          outputSam.addAlignment(duplicateBuffer.peek().right);
        }
@@ -337,7 +337,7 @@ END DEBUG */
        // Maintain the invariant that the first item in recordBuffer may have duplicates
        while ( !recordBuffer.isEmpty() && discardSet.contains(recordBuffer.peekFirst().right.getReadName()) ) {
          String duplicateReadName = recordBuffer.poll().right.getReadName();
-         incrementDuplicateStats(dupStats, duplicateReadName);
+         incrementDuplicateStats(dupStats, allReadsAsMerged, duplicateReadName);
          discardSet.remove(duplicateReadName);
        }
     }
@@ -347,8 +347,8 @@ END DEBUG */
         this.outputSam.close();
     }
 
-    public static void incrementDuplicateStats (DupStats dupStats, String readName) {
-      if ( readName.startsWith("M_") ) {
+    public static void incrementDuplicateStats (DupStats dupStats, Boolean allReadsAsMerged, String readName) {
+      if ( allReadsAsMerged || readName.startsWith("M_") ) {
         dupStats.removed_merged++;
       } else if ( readName.startsWith("F_") ) {
         dupStats.removed_forward++;
@@ -357,8 +357,8 @@ END DEBUG */
       }
     }
 
-    public static void decrementDuplicateStats (DupStats dupStats, String readName) {
-      if ( readName.startsWith("M_") ) {
+    public static void decrementDuplicateStats (DupStats dupStats, Boolean allReadsAsMerged, String readName) {
+      if ( allReadsAsMerged || readName.startsWith("M_") ) {
         dupStats.removed_merged--;
       } else if ( readName.startsWith("F_") ) {
         dupStats.removed_forward--;
