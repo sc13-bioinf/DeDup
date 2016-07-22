@@ -261,6 +261,7 @@ public class RMDupper{
           if ( allReadsAsMerged &&
                recordBuffer.peekFirst().left.equals(maybeDuplicate.left)  &&
                recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) {
+                 //System.out.println("* add");
                  duplicateBuffer.add(maybeDuplicate);
           } else if ( recordBuffer.peekFirst().right.getReadName().startsWith("M_") &&
                ( ( maybeDuplicate.right.getReadName().startsWith("M_") &&
@@ -318,7 +319,6 @@ for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateB
 }
 
 END DEBUG */
-       //discardSet.add(duplicateBuffer.peek().right.getReadName());
        if ( !duplicateBuffer.isEmpty() && !discardSet.contains(duplicateBuffer.peek().right.getReadName()) ) {
          //System.out.println("WRITE "+duplicateBuffer.peek());
          decrementDuplicateStats(dupStats, allReadsAsMerged, duplicateBuffer.peek().right.getReadName());
