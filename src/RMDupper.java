@@ -229,7 +229,6 @@ public class RMDupper{
             if ( recordBuffer.size() > 0 && recordBuffer.peekFirst().middle < curr.getAlignmentStart() ) {
                 checkForDuplication(dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet);
             }
-            //System.out.println("queueOrOutput rb.add: "+curr.getAlignmentStart()+" "+curr.getAlignmentEnd()+" "+curr.getReadName());
             recordBuffer.add (new ImmutableTriple<Integer, Integer, SAMRecord>(curr.getAlignmentStart(), curr.getAlignmentEnd(), curr));
         }
     }
@@ -244,11 +243,6 @@ public class RMDupper{
     public static void checkForDuplication (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
         // At this point recordBuffer contains all alignments that overlap with its first entry
         // Therefore the task here is to de-duplicate for the first entry in recordBuffer
-        //System.out.println ("checkForDuplication");
-        //if (recordBuffer.size() > 0 ) {
-        //  System.out.println("recordBuffer.peekFirst: "+recordBuffer.peekFirst());
-        //  System.out.println("recordBuffer.size: "+recordBuffer.size());
-        //}
         Comparator<SAMRecord> samRecordComparator;
         if ( allReadsAsMerged ) {
           samRecordComparator = new SAMRecordQualityComparator();
@@ -304,7 +298,7 @@ public class RMDupper{
              duplicateBuffer.add(maybeDuplicate);
           }
         }
-         /*DEBUG
+        /* DEBUG
 System.out.println ("duplicateBuffer");
 ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> sortedDuplicateBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(duplicateBuffer.size());
 Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> dit = duplicateBuffer.iterator();
