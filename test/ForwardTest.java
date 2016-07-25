@@ -10,12 +10,13 @@ public class ForwardTest extends AbstractTest {
 
   public void setUp () throws IOException {
         in = getClass().getResourceAsStream("/test-resources/forward_test.bam");
+        allReadsAsMerged = Boolean.FALSE;
         universalSetup();
   }
 
   @Test
   public void resolveDuplicate_forward () throws IOException {
-    RMDupper rmdup = new RMDupper(in, out);
+    RMDupper rmdup = new RMDupper(in, out, allReadsAsMerged);
     rmdup.readSAMFile();
     rmdup.finish();
     copier.start();

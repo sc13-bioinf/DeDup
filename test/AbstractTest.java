@@ -34,6 +34,7 @@ public abstract class AbstractTest {
   protected SamReader inputSam;
   protected SAMFileWriter outputSam;
   protected ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer;
+  protected Boolean allReadsAsMerged;
 
   @Before
   public abstract void setUp () throws IOException;
