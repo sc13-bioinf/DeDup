@@ -6,21 +6,21 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.io.IOException;
 
-public class ForwardTest extends AbstractTest {
+public class AllReadsAsMergedTest extends AbstractTest {
 
   public void setUp () throws IOException {
-        in = getClass().getResourceAsStream("/test-resources/forward_test.bam");
-        allReadsAsMerged = Boolean.FALSE;
+        in = getClass().getResourceAsStream("/test-resources/allReadsAsMerged_test.bam");
+        allReadsAsMerged = Boolean.TRUE;
         universalSetup();
   }
 
   @Test
-  public void resolveDuplicate_forward () throws IOException {
+  public void resolveDuplicate_forward_with_merged () throws IOException {
     RMDupper rmdup = new RMDupper(in, out, allReadsAsMerged);
     rmdup.readSAMFile();
     rmdup.finish();
     copier.start();
     Set<String> observedReadNames = Utils.getReadNamesFromSAM(inFromResult).stream().collect(Collectors.toSet());
-    assertEquals(Data.RMDupperTest__resolveDuplicate_forward_expectedReadNames, observedReadNames);
+    assertEquals(Data.RMDupperTest_allReadsAsMerged_expectedReadNames, observedReadNames);
   }
 }

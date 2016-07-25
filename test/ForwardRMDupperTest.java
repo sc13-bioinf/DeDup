@@ -17,6 +17,7 @@ public class ForwardRMDupperTest extends AbstractTest {
 
   public void setUp () throws IOException {
         in = getClass().getResourceAsStream("/test-resources/queueOrOutput_test_trigger_checkForDuplication_only_f.bam");
+        allReadsAsMerged = Boolean.FALSE;
         universalSetup();
         inputSAMoutputSAMrecordBufferSetup();
   }
@@ -29,7 +30,7 @@ public class ForwardRMDupperTest extends AbstractTest {
       Iterator it = inputSam.iterator();
       for (int i = 0; i < 3; i++) {
           SAMRecord curr = (SAMRecord) it.next();
-          RMDupper.queueOrOutput (dupStats, occurenceCounterMerged, outputSam, recordBuffer, discardSet, curr);
+          RMDupper.queueOrOutput (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet, curr);
       }
       while (recordBuffer.size() > 0) {
         outputSam.addAlignment(recordBuffer.poll().right);
@@ -49,7 +50,7 @@ public class ForwardRMDupperTest extends AbstractTest {
       Iterator it = inputSam.iterator();
       while (it.hasNext()) {
           SAMRecord curr = (SAMRecord) it.next();
-          RMDupper.queueOrOutput (dupStats, occurenceCounterMerged, outputSam, recordBuffer, discardSet, curr);
+          RMDupper.queueOrOutput (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet, curr);
       }
       while (recordBuffer.size() > 0) {
         outputSam.addAlignment(recordBuffer.poll().right);

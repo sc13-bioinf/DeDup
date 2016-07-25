@@ -53,4 +53,8 @@ public class Data {
         "M_NS500559:30:HNM25BGXX:2:12204:22389:14659",
         "M_NS500559:30:HNM25BGXX:2:12204:22389:14660"
         ).collect(Collectors.toSet());
+        public static final Set<String> RMDupperTest_allReadsAsMerged_expectedReadNames = Stream.of(
+        "M_NS500559:30:HNM25BGXX:1:12111:13698:2649",
+        "F_NS500559:30:HNM25BGXX:4:23407:17199:15163"
+        ).collect(Collectors.toSet());
 }

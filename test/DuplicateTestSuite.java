@@ -4,6 +4,7 @@ import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+	AllReadsAsMergedTest.class,
 	ForwardTest.class,
 	ForwardWithMergedTest.class,
 	ReverseMergedTest.class,
