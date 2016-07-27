@@ -14,3 +14,4 @@ DeDup expects the different kinds of reads to have read names that begin with on
 To remove PCR duplicates we only retain a single read for a given genomic position and read direction. For M_ (merged) reads we know both the start and end of the sequenced fragment. For F_ and R_ reads we only know the start or end of the sequenced fragment becuase the read length is variable.
 
  
+A little documentation is available at http://dedup.readthedocs.io/en/latest/
