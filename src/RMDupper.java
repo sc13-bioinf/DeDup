@@ -137,6 +137,14 @@ public class RMDupper{
                 System.exit(0);
             }
 
+            //Check whether we have a directory as output path, else produce error message and quit!
+
+            File f = new File(outputpath);
+            if(!f.isDirectory()) {
+                System.err.println("The output folder should be a folder and not a file!");
+                System.exit(0);
+            }
+
             File inputFile = new File(input);
             File outputFile = new File(outputpath + "/" + Files.getNameWithoutExtension(inputFile.getAbsolutePath()) + "_rmdup.bam");
             File outputlog = new File(outputpath + "/" + Files.getNameWithoutExtension(inputFile.getAbsolutePath()) + ".log");
