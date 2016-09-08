@@ -27,9 +27,7 @@ import htsjdk.samtools.*;
 import java.util.*;
 import java.io.File;
 
-import datastructure.DedupStore;
 import datastructure.OccurenceCounterMerged;
-import datastructure.OccurenceCounterSingle;
 import datastructure.DupStats;
 
 import org.apache.commons.cli.BasicParser;
@@ -49,7 +47,7 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
  */
 public class RMDupper{
     private static final String CLASS_NAME = "dedup";
-    private static final String VERSION = "0.11.2";
+    private static final String VERSION = "0.11.3";
     private static boolean piped = true;
 
     private final Boolean allReadsAsMerged;
@@ -73,7 +71,7 @@ public class RMDupper{
 
 
     public static void main(String[] args) throws IOException {
-        System.out.println("DeDup v" + VERSION);
+        System.err.println("DeDup v" + VERSION);
         // the command line parameters
         Options helpOptions = new Options();
         helpOptions.addOption("h", "help", false, "show this help page");
@@ -82,6 +80,7 @@ public class RMDupper{
         options.addOption("i", "input", true, "the input file if this option is not specified,\nthe input is expected to be piped in");
         options.addOption("o", "output", true, "the output folder. Has to be specified if input is set.");
         options.addOption("m", "merged", false, "the input only contains merged reads.\n If this option is specified read names are not examined for prefixes.\n Both the start and end of the aligment are considered for all reads.");
+        options.addOption("v", "version", false, "the version of DeDup.");
         HelpFormatter helpformatter = new HelpFormatter();
         CommandLineParser parser = new BasicParser();
         try {
@@ -109,6 +108,10 @@ public class RMDupper{
             if (cmd.hasOption('m')) {
               merged = Boolean.TRUE;
             }
+            if(cmd.hasOption('v')){
+                System.out.println("DeDup v" + VERSION);
+                System.exit(0);
+            }
         } catch (ParseException e) {
             helpformatter.printHelp(CLASS_NAME, options);
             System.err.println(e.getMessage());
@@ -120,22 +123,19 @@ public class RMDupper{
             RMDupper rmdup = new RMDupper(System.in, System.out, merged);
             rmdup.readSAMFile();
 
-
-            /*
-             We can't write this to System.Out since we are already dumping our reads there!
-
-             System.out.println("Total reads: " + rmdup.dupStats.total + "\n");
-            System.out.println("Reverse removed: " + rmdup.dupStats.removed_reverse + "\n");
-            System.out.println("Forward removed: " + rmdup.dupStats.removed_forward + "\n");
-            System.out.println("Merged removed: " + rmdup.dupStats.removed_merged + "\n");
-            System.out.println("Total removed: " + (rmdup.dupStats.removed_forward + rmdup.dupStats.removed_merged
+            System.err.println("We are in piping mode!");
+            System.err.println("Total reads: " + rmdup.dupStats.total + "\n");
+            System.err.println("Reverse removed: " + rmdup.dupStats.removed_reverse + "\n");
+            System.err.println("Forward removed: " + rmdup.dupStats.removed_forward + "\n");
+            System.err.println("Merged removed: " + rmdup.dupStats.removed_merged + "\n");
+            System.err.println("Total removed: " + (rmdup.dupStats.removed_forward + rmdup.dupStats.removed_merged
                     + rmdup.dupStats.removed_reverse) + "\n");
             if (rmdup.dupStats.removed_merged + rmdup.dupStats.removed_forward + rmdup.dupStats.removed_reverse == 0) {
-                System.out.println("Duplication Rate: " + df.format(0.00));
+                System.err.println("Duplication Rate: " + df.format(0.00));
             } else {
-                System.out.println("Duplication Rate: " + df.format((double) (rmdup.dupStats.removed_merged + rmdup.dupStats.removed_reverse + rmdup.dupStats.removed_forward) / (double) rmdup.dupStats.total));
+                System.err.println("Duplication Rate: " + df.format((double) (rmdup.dupStats.removed_merged + rmdup.dupStats.removed_reverse + rmdup.dupStats.removed_forward) / (double) rmdup.dupStats.total));
             }
-             */
+
 
         } else {
             if (outputpath.length() == 0) {
@@ -209,7 +209,7 @@ public class RMDupper{
      * Currently, only merged Reads with the "M" Flag in front are checked for Duplicates.
      * R/F Flags are simply written into output File, also other "non-flagged" ones.
      */
-    public void readSAMFile() {
+    public void readSAMFile() throws IOException {
         ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer = new ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>>(1000);
         Set<String> discardSet = new HashSet<String>(1000);
         String referenceName = SAMRecord.NO_ALIGNMENT_REFERENCE_NAME;
@@ -236,6 +236,7 @@ public class RMDupper{
             }
         }
         flushQueue(this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, discardSet);
+        finish();
     }
 
     public static void queueOrOutput (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet, SAMRecord curr) {
