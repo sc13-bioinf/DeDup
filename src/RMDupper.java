@@ -50,6 +50,7 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
 public class RMDupper{
     private static final String CLASS_NAME = "dedup";
     private static final String VERSION = "0.11.2";
+    private static boolean piped = true;
 
     private final Boolean allReadsAsMerged;
     private final SamReader inputSam;
@@ -92,7 +93,6 @@ public class RMDupper{
         } catch (ParseException e1) {
         }
 
-        boolean pipe = true;
         String input = "";
         String outputpath = "";
         Boolean merged = Boolean.FALSE;
@@ -101,7 +101,7 @@ public class RMDupper{
 
             if (cmd.hasOption('i')) {
                 input = cmd.getOptionValue('i');
-                pipe = false;
+                piped = false;
             }
             if (cmd.hasOption('o')) {
                 outputpath = cmd.getOptionValue('o');
@@ -116,10 +116,15 @@ public class RMDupper{
         }
         DecimalFormat df = new DecimalFormat("##.##");
 
-        if (pipe) {
+        if (piped) {
             RMDupper rmdup = new RMDupper(System.in, System.out, merged);
             rmdup.readSAMFile();
-            System.out.println("Total reads: " + rmdup.dupStats.total + "\n");
+
+
+            /*
+             We can't write this to System.Out since we are already dumping our reads there!
+
+             System.out.println("Total reads: " + rmdup.dupStats.total + "\n");
             System.out.println("Reverse removed: " + rmdup.dupStats.removed_reverse + "\n");
             System.out.println("Forward removed: " + rmdup.dupStats.removed_forward + "\n");
             System.out.println("Merged removed: " + rmdup.dupStats.removed_merged + "\n");
@@ -130,6 +135,8 @@ public class RMDupper{
             } else {
                 System.out.println("Duplication Rate: " + df.format((double) (rmdup.dupStats.removed_merged + rmdup.dupStats.removed_reverse + rmdup.dupStats.removed_forward) / (double) rmdup.dupStats.total));
             }
+             */
+
         } else {
             if (outputpath.length() == 0) {
                 System.err.println("The output folder has to be specified");
@@ -223,7 +230,9 @@ public class RMDupper{
 
             this.dupStats.total++;
             if(this.dupStats.total % 100000 == 0){
-                System.err.println("Reads treated: " + this.dupStats.total);
+                if(!piped) {
+                    System.err.println("Reads treated: " + this.dupStats.total);
+                }
             }
         }
         flushQueue(this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, discardSet);
