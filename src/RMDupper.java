@@ -25,6 +25,8 @@ import java.io.OutputStream;
 import java.text.DecimalFormat;
 import htsjdk.samtools.*;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.io.File;
 
 import datastructure.DedupStore;
@@ -56,6 +58,23 @@ public class RMDupper{
     private final SAMFileWriter outputSam;
     private final DupStats dupStats = new DupStats();
     private OccurenceCounterMerged oc = new OccurenceCounterMerged();
+
+    //private final EnumSet<DuplicateLogic>[] duplicatConditionsValues = new EnumSet<DuplicateLogic>[] {};
+    private static final List<EnumSet<DuplicateLogic>> duplicateCondition = Arrays.asList(
+      EnumSet.of(DuplicateLogic.buffer_read_merged,DuplicateLogic.maybed_read_merged,DuplicateLogic.equal_alignment_start,DuplicateLogic.equal_alignment_end),
+      EnumSet.of(DuplicateLogic.buffer_read_merged,DuplicateLogic.maybed_read_one,DuplicateLogic.equal_alignment_start,DuplicateLogic.maybed_shorter_or_equal),
+      EnumSet.of(DuplicateLogic.buffer_read_merged,DuplicateLogic.maybed_read_two,DuplicateLogic.equal_alignment_end,DuplicateLogic.maybed_shorter_or_equal),
+
+      EnumSet.of(DuplicateLogic.buffer_read_one,DuplicateLogic.maybed_read_merged,DuplicateLogic.equal_alignment_start,DuplicateLogic.maybed_longer_or_equal),
+      EnumSet.of(DuplicateLogic.buffer_read_one,DuplicateLogic.maybed_read_one,DuplicateLogic.equal_alignment_start),
+      EnumSet.of(DuplicateLogic.buffer_read_one,DuplicateLogic.maybed_read_two,DuplicateLogic.equal_alignment_end,DuplicateLogic.maybed_shorter_or_equal),
+
+      EnumSet.of(DuplicateLogic.buffer_read_two,DuplicateLogic.maybed_read_merged,DuplicateLogic.equal_alignment_end,DuplicateLogic.maybed_longer_or_equal),
+      EnumSet.of(DuplicateLogic.buffer_read_two,DuplicateLogic.maybed_read_one,DuplicateLogic.equal_alignment_start,DuplicateLogic.equal_alignment_end),
+      EnumSet.of(DuplicateLogic.buffer_read_two,DuplicateLogic.maybed_read_two,DuplicateLogic.equal_alignment_end)
+
+    );
+    private static final Set<EnumSet<DuplicateLogic>> duplicateConditionSet =  new HashSet<EnumSet<DuplicateLogic>>(duplicateCondition);
 
     public RMDupper(File inputFile, File outputFile, Boolean merged) {
         inputSam = SamReaderFactory.make().enable(SamReaderFactory.Option.DONT_MEMORY_MAP_INDEX).validationStringency(ValidationStringency.LENIENT).open(inputFile);
@@ -261,43 +280,54 @@ public class RMDupper{
           if ( allReadsAsMerged ) {
             if ( recordBuffer.peekFirst().left.equals(maybeDuplicate.left)  &&
                  recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) {
-                 //System.out.println("* add");
                  duplicateBuffer.add(maybeDuplicate);
             }
           } else {
-            if ( recordBuffer.peekFirst().right.getReadName().startsWith("M_") &&
-                 ( ( maybeDuplicate.right.getReadName().startsWith("M_") &&
-                     recordBuffer.peekFirst().left.equals(maybeDuplicate.left)  &&
-                     recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) ||
-                   ( maybeDuplicate.right.getReadName().startsWith("F_") &&
-                     recordBuffer.peekFirst().left.equals(maybeDuplicate.left) &&
-                     duplicateIsShorterOrEqual ) ||
-                   ( maybeDuplicate.right.getReadName().startsWith("R_") &&
-                     recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) &&
-                     duplicateIsShorterOrEqual ) ) ) {
-              //System.out.println("M_ add");
-              duplicateBuffer.add(maybeDuplicate);
-            } else if ( recordBuffer.peekFirst().right.getReadName().startsWith("F_") &&
-                        ( ( maybeDuplicate.right.getReadName().startsWith("M_") &&
-                            recordBuffer.peekFirst().left.equals(maybeDuplicate.left) &&
-                            duplicateIsLongerOrEqual ) ||
-                          ( maybeDuplicate.right.getReadName().startsWith("F_") &&
-                            recordBuffer.peekFirst().left.equals(maybeDuplicate.left) ) ||
-                          ( maybeDuplicate.right.getReadName().startsWith("R_") &&
-                            recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) &&
-                            duplicateIsShorterOrEqual ) ) ) {
-              //System.out.println("F_ add");
-              duplicateBuffer.add(maybeDuplicate);
-            } else if ( recordBuffer.peekFirst().right.getReadName().startsWith("R_") &&
-                        ( ( maybeDuplicate.right.getReadName().startsWith("M_") &&
-                            recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) &&
-                            duplicateIsLongerOrEqual ) ||
-                          ( maybeDuplicate.right.getReadName().startsWith("F_") &&
-                            recordBuffer.peekFirst().left.equals(maybeDuplicate.left) &&
-                            recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) ||
-                          ( maybeDuplicate.right.getReadName().startsWith("R_") &&
-                            recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) ) ) {
-              //System.out.println("R_ add");
+            // We build a logic table
+            EnumSet<DuplicateLogic> testConditon = EnumSet.noneOf(DuplicateLogic.class);
+            if ( recordBuffer.peekFirst().right.getReadName().startsWith("M_") ) {
+              testConditon.add(DuplicateLogic.buffer_read_merged);
+            } else if ( recordBuffer.peekFirst().right.getReadName().startsWith("F_") ) {
+              testConditon.add(DuplicateLogic.buffer_read_one);
+            } else if ( recordBuffer.peekFirst().right.getReadName().startsWith("R_") ) {
+              testConditon.add(DuplicateLogic.buffer_read_two);
+            } else {
+              System.err.println("Unlabelled read '" + recordBuffer.peekFirst().right.getReadName() + "' read name must start with one of M_,F_,R when not treating all reads as merged");
+            }
+
+            if ( maybeDuplicate.right.getReadName().startsWith("M_") ) {
+              testConditon.add(DuplicateLogic.maybed_read_merged);
+            } else if ( maybeDuplicate.right.getReadName().startsWith("F_") ) {
+              testConditon.add(DuplicateLogic.maybed_read_one);
+            } else if ( maybeDuplicate.right.getReadName().startsWith("R_") ) {
+              testConditon.add(DuplicateLogic.maybed_read_two);
+            } else {
+              System.err.println("Unlabelled read '" + maybeDuplicate.right.getReadName() + "' read name must start with one of M_,F_,R when not treating all reads as merged");
+            }
+
+            if ( recordBuffer.peekFirst().left.equals(maybeDuplicate.left) ) { testConditon.add(DuplicateLogic.equal_alignment_start); }
+            if ( recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) { testConditon.add(DuplicateLogic.equal_alignment_end); }
+
+            if ( duplicateIsShorterOrEqual ) { testConditon.add(DuplicateLogic.maybed_shorter_or_equal); }
+            if ( duplicateIsLongerOrEqual ) { testConditon.add(DuplicateLogic.maybed_longer_or_equal); }
+
+            //System.out.println("Testing for duplication: "+testConditon);
+            //System.out.println(recordBuffer.peekFirst().right.getReadName()+"\t"+recordBuffer.peekFirst().right.getAlignmentStart()+"\t"+recordBuffer.peekFirst().right.getAlignmentEnd());
+            //System.out.println(maybeDuplicate.right.getReadName()+"\t"+maybeDuplicate.right.getAlignmentStart()+"\t"+maybeDuplicate.right.getAlignmentEnd());
+
+            //for ( EnumSet<DuplicateLogic> match : duplicateConditionSet.stream().filter(dc -> testConditon.containsAll(dc) ).collect(Collectors.toList()) ) {
+            //  System.out.println("Match to: "+match);
+            //}
+            //for ( EnumSet<DuplicateLogic> match : duplicateConditionSet.stream().collect(Collectors.toList()) ) {
+            //  System.out.println("Try to match: "+match);
+            //  if ( match.containsAll(testConditon) )
+            //  {
+            //    System.out.println("success");
+            //  }
+            //}
+
+            // Test for Duplication
+            if ( duplicateConditionSet.stream().anyMatch( dc -> testConditon.containsAll(dc) ) ) {
               duplicateBuffer.add(maybeDuplicate);
             }
           }
