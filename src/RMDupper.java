@@ -59,22 +59,24 @@ public class RMDupper{
     private final DupStats dupStats = new DupStats();
     private OccurenceCounterMerged oc = new OccurenceCounterMerged();
 
-    //private final EnumSet<DuplicateLogic>[] duplicatConditionsValues = new EnumSet<DuplicateLogic>[] {};
-    private static final List<EnumSet<DuplicateLogic>> duplicateCondition = Arrays.asList(
-      EnumSet.of(DuplicateLogic.buffer_read_merged,DuplicateLogic.maybed_read_merged,DuplicateLogic.equal_alignment_start,DuplicateLogic.equal_alignment_end),
-      EnumSet.of(DuplicateLogic.buffer_read_merged,DuplicateLogic.maybed_read_one,DuplicateLogic.equal_alignment_start,DuplicateLogic.maybed_shorter_or_equal),
-      EnumSet.of(DuplicateLogic.buffer_read_merged,DuplicateLogic.maybed_read_two,DuplicateLogic.equal_alignment_end,DuplicateLogic.maybed_shorter_or_equal),
+    //private final EnumSet<DL>[] duplicatConditionsValues = new EnumSet<DL>[] {};
+    private static final List<EnumSet<DL>> duplicateCondition = Arrays.asList(
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_merged,DL.equal_alignment_start,DL.equal_alignment_end),
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_one,DL.equal_alignment_start,DL.maybed_shorter_or_equal),
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_two,DL.equal_alignment_end,DL.maybed_shorter_or_equal),
 
-      EnumSet.of(DuplicateLogic.buffer_read_one,DuplicateLogic.maybed_read_merged,DuplicateLogic.equal_alignment_start,DuplicateLogic.maybed_longer_or_equal),
-      EnumSet.of(DuplicateLogic.buffer_read_one,DuplicateLogic.maybed_read_one,DuplicateLogic.equal_alignment_start),
-      EnumSet.of(DuplicateLogic.buffer_read_one,DuplicateLogic.maybed_read_two,DuplicateLogic.equal_alignment_end,DuplicateLogic.maybed_shorter_or_equal),
+      EnumSet.of(DL.buffer_read_one,DL.maybed_read_merged,DL.equal_alignment_start,DL.maybed_longer_or_equal),
+      EnumSet.of(DL.buffer_read_one,DL.maybed_read_one,DL.equal_alignment_start,DL.buffer_forward_strand,DL.maybed_forward_strand),
+      EnumSet.of(DL.buffer_read_one,DL.maybed_read_one,DL.equal_alignment_end,DL.buffer_reverse_strand,DL.maybed_reverse_strand),
+      EnumSet.of(DL.buffer_read_one,DL.maybed_read_two,DL.equal_alignment_end,DL.maybed_shorter_or_equal),
 
-      EnumSet.of(DuplicateLogic.buffer_read_two,DuplicateLogic.maybed_read_merged,DuplicateLogic.equal_alignment_end,DuplicateLogic.maybed_longer_or_equal),
-      EnumSet.of(DuplicateLogic.buffer_read_two,DuplicateLogic.maybed_read_one,DuplicateLogic.equal_alignment_start,DuplicateLogic.equal_alignment_end),
-      EnumSet.of(DuplicateLogic.buffer_read_two,DuplicateLogic.maybed_read_two,DuplicateLogic.equal_alignment_end)
+      EnumSet.of(DL.buffer_read_two,DL.maybed_read_merged,DL.equal_alignment_end,DL.maybed_longer_or_equal),
+      EnumSet.of(DL.buffer_read_two,DL.maybed_read_one,DL.equal_alignment_end,DL.maybed_shorter_or_equal),
+      EnumSet.of(DL.buffer_read_two,DL.maybed_read_two,DL.equal_alignment_end,DL.equal_alignment_end,DL.buffer_forward_strand,DL.maybed_forward_strand),
+      EnumSet.of(DL.buffer_read_two,DL.maybed_read_two,DL.equal_alignment_start,DL.equal_alignment_end,DL.buffer_reverse_strand,DL.maybed_reverse_strand)
 
     );
-    private static final Set<EnumSet<DuplicateLogic>> duplicateConditionSet =  new HashSet<EnumSet<DuplicateLogic>>(duplicateCondition);
+    private static final Set<EnumSet<DL>> duplicateConditionSet =  new HashSet<EnumSet<DL>>(duplicateCondition);
 
     public RMDupper(File inputFile, File outputFile, Boolean merged) {
         inputSam = SamReaderFactory.make().enable(SamReaderFactory.Option.DONT_MEMORY_MAP_INDEX).validationStringency(ValidationStringency.LENIENT).open(inputFile);
@@ -284,41 +286,44 @@ public class RMDupper{
             }
           } else {
             // We build a logic table
-            EnumSet<DuplicateLogic> testConditon = EnumSet.noneOf(DuplicateLogic.class);
+            EnumSet<DL> testConditon = EnumSet.noneOf(DL.class);
             if ( recordBuffer.peekFirst().right.getReadName().startsWith("M_") ) {
-              testConditon.add(DuplicateLogic.buffer_read_merged);
+              testConditon.add(DL.buffer_read_merged);
             } else if ( recordBuffer.peekFirst().right.getReadName().startsWith("F_") ) {
-              testConditon.add(DuplicateLogic.buffer_read_one);
+              testConditon.add(DL.buffer_read_one);
             } else if ( recordBuffer.peekFirst().right.getReadName().startsWith("R_") ) {
-              testConditon.add(DuplicateLogic.buffer_read_two);
+              testConditon.add(DL.buffer_read_two);
             } else {
               System.err.println("Unlabelled read '" + recordBuffer.peekFirst().right.getReadName() + "' read name must start with one of M_,F_,R when not treating all reads as merged");
             }
 
             if ( maybeDuplicate.right.getReadName().startsWith("M_") ) {
-              testConditon.add(DuplicateLogic.maybed_read_merged);
+              testConditon.add(DL.maybed_read_merged);
             } else if ( maybeDuplicate.right.getReadName().startsWith("F_") ) {
-              testConditon.add(DuplicateLogic.maybed_read_one);
+              testConditon.add(DL.maybed_read_one);
             } else if ( maybeDuplicate.right.getReadName().startsWith("R_") ) {
-              testConditon.add(DuplicateLogic.maybed_read_two);
+              testConditon.add(DL.maybed_read_two);
             } else {
               System.err.println("Unlabelled read '" + maybeDuplicate.right.getReadName() + "' read name must start with one of M_,F_,R when not treating all reads as merged");
             }
 
-            if ( recordBuffer.peekFirst().left.equals(maybeDuplicate.left) ) { testConditon.add(DuplicateLogic.equal_alignment_start); }
-            if ( recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) { testConditon.add(DuplicateLogic.equal_alignment_end); }
+            if ( recordBuffer.peekFirst().left.equals(maybeDuplicate.left) ) { testConditon.add(DL.equal_alignment_start); }
+            if ( recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) { testConditon.add(DL.equal_alignment_end); }
 
-            if ( duplicateIsShorterOrEqual ) { testConditon.add(DuplicateLogic.maybed_shorter_or_equal); }
-            if ( duplicateIsLongerOrEqual ) { testConditon.add(DuplicateLogic.maybed_longer_or_equal); }
+            if ( duplicateIsShorterOrEqual ) { testConditon.add(DL.maybed_shorter_or_equal); }
+            if ( duplicateIsLongerOrEqual ) { testConditon.add(DL.maybed_longer_or_equal); }
 
-            //System.out.println("Testing for duplication: "+testConditon);
-            //System.out.println(recordBuffer.peekFirst().right.getReadName()+"\t"+recordBuffer.peekFirst().right.getAlignmentStart()+"\t"+recordBuffer.peekFirst().right.getAlignmentEnd());
-            //System.out.println(maybeDuplicate.right.getReadName()+"\t"+maybeDuplicate.right.getAlignmentStart()+"\t"+maybeDuplicate.right.getAlignmentEnd());
+            if ( recordBuffer.peekFirst().right.getReadNegativeStrandFlag() ) { testConditon.add(DL.buffer_reverse_strand); } else { testConditon.add(DL.buffer_forward_strand); }
+            if ( maybeDuplicate.right.getReadNegativeStrandFlag() ) { testConditon.add(DL.maybed_reverse_strand); } else { testConditon.add(DL.maybed_forward_strand); }
 
-            //for ( EnumSet<DuplicateLogic> match : duplicateConditionSet.stream().filter(dc -> testConditon.containsAll(dc) ).collect(Collectors.toList()) ) {
-            //  System.out.println("Match to: "+match);
-            //}
-            //for ( EnumSet<DuplicateLogic> match : duplicateConditionSet.stream().collect(Collectors.toList()) ) {
+            System.out.println("Testing for duplication: "+testConditon);
+            System.out.println(recordBuffer.peekFirst().right.getReadName()+"\t"+recordBuffer.peekFirst().right.getAlignmentStart()+"\t"+recordBuffer.peekFirst().right.getAlignmentEnd());
+            System.out.println(maybeDuplicate.right.getReadName()+"\t"+maybeDuplicate.right.getAlignmentStart()+"\t"+maybeDuplicate.right.getAlignmentEnd());
+
+            for ( EnumSet<DL> match : duplicateConditionSet.stream().filter(dc -> testConditon.containsAll(dc) ).collect(Collectors.toList()) ) {
+              System.out.println("Match to: "+match);
+            }
+            //for ( EnumSet<DL> match : duplicateConditionSet.stream().collect(Collectors.toList()) ) {
             //  System.out.println("Try to match: "+match);
             //  if ( match.containsAll(testConditon) )
             //  {
@@ -332,7 +337,7 @@ public class RMDupper{
             }
           }
         }
-        /* DEBUG
+        //DEBUG
 System.out.println ("duplicateBuffer");
 ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> sortedDuplicateBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(duplicateBuffer.size());
 Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> dit = duplicateBuffer.iterator();
@@ -342,16 +347,16 @@ while (dit.hasNext()) {
 sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getMiddle));
 
 for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
-    System.out.println("dbe: "+currTriple+" "+SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
+    System.out.println("dbe: "+currTriple.right.getReadNegativeStrandFlag()+" "+currTriple+" "+SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
 }
 
 // Sort again with priority queue order
 sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, samRecordComparator.reversed()));
 for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
-    System.out.println("sdbe: "+currTriple+" "+SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
+    System.out.println("sdbe: "+currTriple.right.getReadNegativeStrandFlag()+" "+currTriple+" "+SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
 }
 
-END DEBUG */
+//END DEBUG
        if ( !duplicateBuffer.isEmpty() && !discardSet.contains(duplicateBuffer.peek().right.getReadName()) ) {
          //System.out.println("WRITE "+duplicateBuffer.peek());
          decrementDuplicateStats(dupStats, allReadsAsMerged, duplicateBuffer.peek().right.getReadName());
