@@ -10,6 +10,9 @@ import org.junit.runners.Suite;
 	ReverseMergedTest.class,
 	ReverseTest.class,
 	ReverseWithMergedTest.class,
+	SingleTest.class,
+	StrandForwardTest.class,
+	StrandReverseTest.class,
 	YieldTest.class
 })
 public class DuplicateTestSuite {}
