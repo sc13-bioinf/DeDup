@@ -1,0 +1,22 @@
+# Contributor: Alex Peltzer <alex.peltzer@gmail.com>
+# Maintainer: Alex Peltzer <alex.peltzer@gmail.com>
+
+pkgname=dedup
+pkgver=0.11.3
+pkgrel=1
+pkgdesc="An improved duplicates procedure than samtools rmdup."
+arch=('any')
+url="http://it.inf.uni-tuebingen.de/?page_id=161"
+license=('custom')
+depends=('java-runtime')
+source=("DeDup-${pkgver}.jar" "starter.sh")
+noextract=("DeDup-${pkgver}.jar")
+md5sums=('SKIP' 'SKIP')
+
+package() {
+	  cd "$srcdir"
+          install -D -m755 "${srcdir}/DeDup-${pkgver}.jar" "${pkgdir}/opt/$pkgname/DeDup-${pkgver}.jar"
+          install -D -m755 "${srcdir}/starter.sh" "${pkgdir}/opt/$pkgname/starter.sh"
+          install -D -m755 "${pkgdir}/opt/$pkgname/starter.sh" "${pkgdir}/usr/bin/$pkgname"
+	}
+
