@@ -61,13 +61,26 @@ public class RMDupper{
     //private final EnumSet<DL>[] duplicatConditionsValues = new EnumSet<DL>[] {};
     private static final List<EnumSet<DL>> duplicateCondition = Arrays.asList(
       EnumSet.of(DL.buffer_read_merged,DL.maybed_read_merged,DL.equal_alignment_start,DL.equal_alignment_end),
-      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_one,DL.equal_alignment_start,DL.maybed_shorter_or_equal),
-      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_two,DL.equal_alignment_end,DL.maybed_shorter_or_equal),
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_one,DL.equal_alignment_start,DL.maybed_shorter_or_equal,DL.buffer_forward_strand,DL.maybed_forward_strand),
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_one,DL.equal_alignment_start,DL.maybed_shorter_or_equal,DL.buffer_reverse_strand,DL.maybed_forward_strand),
+
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_one,DL.equal_alignment_end,DL.maybed_shorter_or_equal,DL.buffer_forward_strand,DL.maybed_reverse_strand),
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_one,DL.equal_alignment_end,DL.maybed_shorter_or_equal,DL.buffer_reverse_strand,DL.maybed_reverse_strand),
+
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_two,DL.equal_alignment_end,DL.maybed_shorter_or_equal,DL.buffer_forward_strand,DL.maybed_forward_strand),
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_two,DL.equal_alignment_end,DL.maybed_shorter_or_equal,DL.buffer_reverse_strand,DL.maybed_forward_strand),
+
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_two,DL.equal_alignment_start,DL.maybed_shorter_or_equal,DL.buffer_forward_strand,DL.maybed_reverse_strand),
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_two,DL.equal_alignment_start,DL.maybed_shorter_or_equal,DL.buffer_reverse_strand,DL.maybed_reverse_strand),
+
+
 
       EnumSet.of(DL.buffer_read_one,DL.maybed_read_merged,DL.equal_alignment_start,DL.maybed_longer_or_equal),
       EnumSet.of(DL.buffer_read_one,DL.maybed_read_one,DL.equal_alignment_start,DL.buffer_forward_strand,DL.maybed_forward_strand),
       EnumSet.of(DL.buffer_read_one,DL.maybed_read_one,DL.equal_alignment_end,DL.buffer_reverse_strand,DL.maybed_reverse_strand),
       EnumSet.of(DL.buffer_read_one,DL.maybed_read_two,DL.equal_alignment_end,DL.maybed_shorter_or_equal),
+
+
 
       EnumSet.of(DL.buffer_read_two,DL.maybed_read_merged,DL.equal_alignment_end,DL.maybed_longer_or_equal),
       EnumSet.of(DL.buffer_read_two,DL.maybed_read_one,DL.equal_alignment_end,DL.maybed_shorter_or_equal),

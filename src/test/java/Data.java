@@ -70,4 +70,20 @@ public class Data {
         public static final Set<String> RMDupperTest__single_expectedReadNames = Stream.of(
         "M_NS500559:30:HNM25BGXX:2:13301:8450:16718"
         ).collect(Collectors.toSet());
+        public static final Set<String> RMDupperTest__stack_expectedReadNames = Stream.of(
+        "M_DUPS_STACK",
+        "M_DUPS_STACK_1_M_1",
+        "M_DUPS_STACK_2_M_1",
+        "M_DUPS_STACK_3_MFR_1",
+        "M_UNIQ_STACK",
+        "M_UNIQ_STACK_1_M_1",
+        "M_UNIQ_STACK_1_M_3",
+        "M_UNIQ_STACK_1_M_2",
+        "M_UNIQ_STACK_2_M_1",
+        "M_UNIQ_STACK_2_M_2",
+        "M_UNIQ_STACK_2_M_3",
+        "M_UNIQ_STACK_3_MFR_1",
+        "F_UNIQ_STACK_3_MFR_1",
+        "R_UNIQ_STACK_3_MFR_1"
+        ).collect(Collectors.toSet());
 }
