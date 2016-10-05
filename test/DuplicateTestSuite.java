@@ -11,6 +11,7 @@ import org.junit.runners.Suite;
 	ReverseWithMergedTest.class,
 	SingleTest.class,
 	StackTest.class,
+	StackReadOneTest.class,
 	StrandForwardTest.class,
 	StrandReverseTest.class,
 	YieldTest.class
