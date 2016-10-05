@@ -87,4 +87,16 @@ public class Data {
         "F_UNIQ_STACK_3_MFR_1",
         "R_UNIQ_STACK_3_MFR_1"
         ).collect(Collectors.toSet());
+        public static final Set<String> RMDupperTest__stackReadOne_expectedReadNames = Stream.of(
+        "F_DUPS_STACK",
+        "F_DUPS_STACK_1_M_1",
+        "F_DUPS_STACK_2_M_1",
+        "F_UNIQ_STACK",
+        "F_UNIQ_STACK_1_M_1",
+        "R_UNIQ_STACK_1_M_2",
+        "F_UNIQ_STACK_1_M_3",
+        "F_UNIQ_STACK_2_M_1",
+        "F_UNIQ_STACK_2_M_2",
+        "R_UNIQ_STACK_2_M_3"
+        ).collect(Collectors.toSet());
 }
