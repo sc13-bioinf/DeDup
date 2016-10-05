@@ -35,7 +35,8 @@ public class Data {
         "M_NS500559:30:HNM25BGXX:1:12111:13698:2649").collect(Collectors.toSet());
         public static final Set<String> RMDupperTest__resolveDuplicate_reverse_expectedReadNames = Stream.of(
         "R_NS500559:30:HNM25BGXX:1:21203:15540:16052",
-        "R_NS500559:30:HNM25BGXX:4:12601:1145:13392").collect(Collectors.toSet());
+        "R_NS500559:30:HNM25BGXX:4:12601:1145:13392",
+        "R_NS500559:30:HNM25BGXX:4:12406:10671:8628").collect(Collectors.toSet());
         public static final Set<String> RMDupperTest__resolveDuplicate_reverse_with_merged_expectedReadNames = Stream.of(
         "M_NS500559:30:HNM25BGXX:1:12111:13698:2649",
         "M_NS500559:30:HNM25BGXX:1:11102:13689:7752").collect(Collectors.toSet());
