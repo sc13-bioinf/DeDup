@@ -8,7 +8,6 @@ import org.junit.runners.Suite;
 	AllReadsAsMergedTest.class,
 	ForwardTest.class,
 	ForwardWithMergedTest.class,
-	ReverseMergedTest.class,
 	ReverseTest.class,
 	ReverseWithMergedTest.class,
 	SingleTest.class,
