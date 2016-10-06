@@ -12,6 +12,7 @@ import org.junit.runners.Suite;
 	SingleTest.class,
 	StackTest.class,
 	StackReadOneTest.class,
+	StackReadTwoTest.class,
 	StrandForwardTest.class,
 	StrandReverseTest.class,
 	YieldTest.class
