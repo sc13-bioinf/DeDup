@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 import datastructure.DupStats;
 import datastructure.OccurenceCounterMerged;
 
-public class ForwardRMDupperTest extends AbstractTest {
+public class RMDupperTest extends AbstractTest {
 
   public void setUp () throws IOException {
         in = getClass().getResourceAsStream("/test-resources/queueOrOutput_test_trigger_checkForDuplication_only_f.bam");
