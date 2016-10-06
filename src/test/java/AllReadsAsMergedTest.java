@@ -12,7 +12,7 @@ import java.io.IOException;
 public class AllReadsAsMergedTest extends AbstractTest {
 
   public void setUp () throws IOException {
-        in = getClass().getResourceAsStream("/allReadsAsMerged_test.bam");
+        in = getClass().getResourceAsStream("/test-resources/all_reads_as_merged_test.bam");
         allReadsAsMerged = Boolean.TRUE;
         universalSetup();
   }
