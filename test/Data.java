@@ -55,6 +55,18 @@ public class Data {
         "M_NS500559:30:HNM25BGXX:2:12204:22389:14659",
         "M_NS500559:30:HNM25BGXX:2:12204:22389:14660"
         ).collect(Collectors.toSet());
+        public static final Set<String> RMDupperTest__queueOrOutput_unsorted_read_one_forward__read_two_reverse_expectedReadNames = Stream.of(
+        "F_1_1"
+        ).collect(Collectors.toSet());
+        public static final Set<String> RMDupperTest__queueOrOutput_unsorted_read_one_reverse__read_two_forward_expectedReadNames = Stream.of(
+        "F_2_1"
+        ).collect(Collectors.toSet());
+        public static final Set<String> RMDupperTest__queueOrOutput_unsorted_read_two_forward__read_one_reverse_expectedReadNames = Stream.of(
+        "R_3_1"
+        ).collect(Collectors.toSet());
+        public static final Set<String> RMDupperTest__queueOrOutput_unsorted_read_two_reverse__read_one_forward_expectedReadNames = Stream.of(
+        "R_4_1"
+        ).collect(Collectors.toSet());
         public static final Set<String> RMDupperTest_allReadsAsMerged_expectedReadNames = Stream.of(
         "F_1",
         "M_1",
