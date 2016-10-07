@@ -9,6 +9,8 @@ import org.junit.runners.Suite;
 	ForwardWithMergedTest.class,
 	ReverseTest.class,
 	ReverseWithMergedTest.class,
+	RMDupperTest.class,
+	RMDupperUnsortedTest.class,
 	SingleTest.class,
 	StackTest.class,
 	StackReadOneTest.class,
