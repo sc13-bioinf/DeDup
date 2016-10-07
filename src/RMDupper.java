@@ -238,9 +238,19 @@ public class RMDupper{
      */
     public void readSAMFile() {
         Comparator<SAMRecord> samRecordComparatorForRecordBuffer = new SAMRecordPositionAndQualityComparator();
+        Comparator<SAMRecord> samRecordComparatorForDuplicateBuffer;
+
+        if ( this.allReadsAsMerged ) {
+          samRecordComparatorForDuplicateBuffer = new SAMRecordQualityComparator();
+        } else {
+          samRecordComparatorForDuplicateBuffer = new SAMRecordQualityComparatorPreferMerged();
+        }
+
         PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, samRecordComparatorForRecordBuffer));
+        PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, samRecordComparatorForDuplicateBuffer.reversed()));
         Set<String> discardSet = new HashSet<String>(1000);
         String referenceName = SAMRecord.NO_ALIGNMENT_REFERENCE_NAME;
+
         Iterator it = inputSam.iterator();
         while (it.hasNext()) {
             SAMRecord curr = (SAMRecord) it.next();
@@ -248,10 +258,10 @@ public class RMDupper{
                 this.outputSam.addAlignment(curr);
             } else {
                 if ( referenceName == curr.getReferenceName() ) {
-                    queueOrOutput (this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, discardSet, curr);
+                    queueOrOutput (this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet, curr);
                 } else {
-                    flushQueue (this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, discardSet);
-                    queueOrOutput (this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, discardSet, curr);
+                    flushQueue (this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet);
+                    queueOrOutput (this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet, curr);
                     referenceName = curr.getReferenceName();
                 }
             }
@@ -261,39 +271,32 @@ public class RMDupper{
                 System.err.println("Reads treated: " + this.dupStats.total);
             }
         }
-        flushQueue(this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, discardSet);
+        flushQueue(this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet);
     }
 
-    public static void queueOrOutput (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet, SAMRecord curr) {
+    public static void queueOrOutput (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer, Set<String> discardSet, SAMRecord curr) {
         //Don't do anything with unmapped reads, just write them into the output!
         if (curr.getReadUnmappedFlag() || curr.getMappingQuality() == 0) {
           outputSam.addAlignment(curr);
         } else {
             if ( recordBuffer.size() > 0 && recordBuffer.peek().middle < curr.getAlignmentStart() ) {
-                checkForDuplication(dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet);
+                checkForDuplication(dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet);
             }
             recordBuffer.add (new ImmutableTriple<Integer, Integer, SAMRecord>(curr.getAlignmentStart(), curr.getAlignmentEnd(), curr));
         }
     }
 
-    public static void flushQueue (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
+    public static void flushQueue (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer, Set<String> discardSet) {
         while ( !recordBuffer.isEmpty() ) {
-            checkForDuplication (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet);
+            checkForDuplication (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet);
         }
         discardSet.clear();
     }
 
-    public static void checkForDuplication (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
+    public static void checkForDuplication (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer, Set<String> discardSet) {
         // At this point recordBuffer contains all alignments that overlap with its first entry
         // Therefore the task here is to de-duplicate for the first entry in recordBuffer
-        Comparator<SAMRecord> samRecordComparator;
-        if ( allReadsAsMerged ) {
-          samRecordComparator = new SAMRecordQualityComparator();
-        } else {
-          samRecordComparator = new SAMRecordQualityComparatorPreferMerged();
-        }
-
-        PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, samRecordComparator.reversed()));
+        duplicateBuffer.clear();
 
         Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> it = recordBuffer.iterator();
         while (it.hasNext()) {
