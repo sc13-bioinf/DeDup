@@ -301,8 +301,6 @@ public class RMDupper{
         Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> it = recordBuffer.iterator();
         while (it.hasNext()) {
           ImmutableTriple<Integer, Integer, SAMRecord> maybeDuplicate = it.next();
-          boolean duplicateIsShorterOrEqual = maybeDuplicate.middle - maybeDuplicate.left <= recordBuffer.peek().middle - recordBuffer.peek().left;
-          boolean duplicateIsLongerOrEqual = recordBuffer.peek().middle - recordBuffer.peek().left <= maybeDuplicate.middle - maybeDuplicate.left;
 
           if ( allReadsAsMerged ) {
             if ( recordBuffer.peek().left.equals(maybeDuplicate.left)  &&
@@ -334,6 +332,9 @@ public class RMDupper{
 
             if ( recordBuffer.peek().left.equals(maybeDuplicate.left) ) { testConditon.add(DL.equal_alignment_start); }
             if ( recordBuffer.peek().middle.equals(maybeDuplicate.middle) ) { testConditon.add(DL.equal_alignment_end); }
+
+            boolean duplicateIsShorterOrEqual = maybeDuplicate.middle - maybeDuplicate.left <= recordBuffer.peek().middle - recordBuffer.peek().left;
+            boolean duplicateIsLongerOrEqual = recordBuffer.peek().middle - recordBuffer.peek().left <= maybeDuplicate.middle - maybeDuplicate.left;
 
             if ( duplicateIsShorterOrEqual ) { testConditon.add(DL.maybed_shorter_or_equal); }
             if ( duplicateIsLongerOrEqual ) { testConditon.add(DL.maybed_longer_or_equal); }
