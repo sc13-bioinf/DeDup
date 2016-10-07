@@ -334,7 +334,7 @@ public class RMDupper{
             } else if ( recordBuffer.peek().right.getReadName().startsWith("R_") ) {
               testConditon.add(DL.buffer_read_two);
             } else {
-              System.err.println("Unlabelled read '" + recordBuffer.peek().right.getReadName() + "' read name must start with one of M_,F_,R when not treating all reads as merged");
+              throw new RuntimeException("Unlabelled read '" + recordBuffer.peek().right.getReadName() + "' read name must start with one of M_,F_,R when not treating all reads as merged");
             }
 
             if ( maybeDuplicate.right.getReadName().startsWith("M_") ) {
@@ -356,13 +356,13 @@ public class RMDupper{
             if ( recordBuffer.peek().right.getReadNegativeStrandFlag() ) { testConditon.add(DL.buffer_reverse_strand); } else { testConditon.add(DL.buffer_forward_strand); }
             if ( maybeDuplicate.right.getReadNegativeStrandFlag() ) { testConditon.add(DL.maybed_reverse_strand); } else { testConditon.add(DL.maybed_forward_strand); }
 
-            System.out.println("Testing for duplication: "+testConditon);
-            System.out.println(recordBuffer.peek().right.getReadName()+"\t"+recordBuffer.peek().right.getAlignmentStart()+"\t"+recordBuffer.peek().right.getAlignmentEnd());
-            System.out.println(maybeDuplicate.right.getReadName()+"\t"+maybeDuplicate.right.getAlignmentStart()+"\t"+maybeDuplicate.right.getAlignmentEnd());
+            //System.out.println("Testing for duplication: "+testConditon);
+            //System.out.println(recordBuffer.peek().right.getReadName()+"\t"+recordBuffer.peek().right.getAlignmentStart()+"\t"+recordBuffer.peek().right.getAlignmentEnd());
+            //System.out.println(maybeDuplicate.right.getReadName()+"\t"+maybeDuplicate.right.getAlignmentStart()+"\t"+maybeDuplicate.right.getAlignmentEnd());
 
-            for ( EnumSet<DL> match : duplicateConditionSet.stream().filter(dc -> testConditon.containsAll(dc) ).collect(Collectors.toList()) ) {
-              System.out.println("Match to: "+match);
-            }
+            //for ( EnumSet<DL> match : duplicateConditionSet.stream().filter(dc -> testConditon.containsAll(dc) ).collect(Collectors.toList()) ) {
+            //  System.out.println("Match to: "+match);
+            //}
             //for ( EnumSet<DL> match : duplicateConditionSet.stream().collect(Collectors.toList()) ) {
             //  System.out.println("Try to match: "+match);
             //  if ( match.containsAll(testConditon) )
@@ -377,7 +377,8 @@ public class RMDupper{
             }
           }
         }
-        //DEBUG
+        //START DEBUG
+        /*
 System.out.println ("recordBuffer");
 
 Comparator<SAMRecord> samRecordComparatorForRecordBuffer = new SAMRecordPositionAndQualityComparator();
@@ -410,7 +411,7 @@ sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer
 for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
     System.out.println("sdbe: "+(currTriple.right.getReadNegativeStrandFlag()?"-":"+")+" "+currTriple+" "+SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
 }
-
+*/
 //END DEBUG
        if ( !duplicateBuffer.isEmpty() && !discardSet.contains(duplicateBuffer.peek().right.getReadName()) ) {
          //System.out.println("WRITE "+duplicateBuffer.peek());
