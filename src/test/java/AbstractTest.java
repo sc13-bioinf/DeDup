@@ -13,9 +13,10 @@ import htsjdk.samtools.ValidationStringency;
 import htsjdk.samtools.SamInputResource;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 
-import java.util.ArrayDeque;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.Comparator;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -34,7 +35,7 @@ public abstract class AbstractTest {
 
   protected SamReader inputSam;
   protected SAMFileWriter outputSam;
-  protected ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer;
+  protected PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer;
   protected Boolean allReadsAsMerged;
 
   @Before
@@ -54,6 +55,7 @@ public abstract class AbstractTest {
     inputSam = SamReaderFactory.make().enable(SamReaderFactory.Option.DONT_MEMORY_MAP_INDEX).validationStringency(ValidationStringency.LENIENT).open(SamInputResource.of(in));
     outputSam = new SAMFileWriterFactory().makeSAMWriter(inputSam.getFileHeader(), false, out);
 
-    recordBuffer = new ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>>(1000);
+    Comparator<SAMRecord> samRecordComparatorForRecordBuffer = new SAMRecordPositionAndQualityComparator();
+    recordBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, samRecordComparatorForRecordBuffer));
   }
 }
