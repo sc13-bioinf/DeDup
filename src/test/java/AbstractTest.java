@@ -36,6 +36,7 @@ public abstract class AbstractTest {
   protected SamReader inputSam;
   protected SAMFileWriter outputSam;
   protected PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer;
+  protected PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer;
   protected Boolean allReadsAsMerged;
 
   @Before
@@ -57,5 +58,15 @@ public abstract class AbstractTest {
 
     Comparator<SAMRecord> samRecordComparatorForRecordBuffer = new SAMRecordPositionAndQualityComparator();
     recordBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, samRecordComparatorForRecordBuffer));
+
+    Comparator<SAMRecord> samRecordComparatorForDuplicateBuffer;
+
+    if ( this.allReadsAsMerged ) {
+      samRecordComparatorForDuplicateBuffer = new SAMRecordQualityComparator();
+    } else {
+      samRecordComparatorForDuplicateBuffer = new SAMRecordQualityComparatorPreferMerged();
+    }
+
+    duplicateBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, samRecordComparatorForDuplicateBuffer.reversed()));
   }
 }

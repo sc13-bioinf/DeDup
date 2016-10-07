@@ -30,10 +30,10 @@ public class RMDupperUnsortedTest extends AbstractTest {
       Iterator it = inputSam.iterator();
       for (int i = 0; i < 2; i++) {
           SAMRecord curr = (SAMRecord) it.next();
-          RMDupper.queueOrOutput (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet, curr);
+          RMDupper.queueOrOutput (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet, curr);
       }
 
-      RMDupper.checkForDuplication (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet);
+      RMDupper.checkForDuplication (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet);
 
       while (recordBuffer.size() > 0) {
         outputSam.addAlignment(recordBuffer.poll().right);
@@ -54,10 +54,10 @@ public class RMDupperUnsortedTest extends AbstractTest {
       for (int skip = 0; skip < 2; skip++) { it.next(); }
       for (int i = 0; i < 2; i++) {
           SAMRecord curr = (SAMRecord) it.next();
-          RMDupper.queueOrOutput (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet, curr);
+          RMDupper.queueOrOutput (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet, curr);
       }
 
-      RMDupper.checkForDuplication (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet);
+      RMDupper.checkForDuplication (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet);
 
       while (recordBuffer.size() > 0) {
         outputSam.addAlignment(recordBuffer.poll().right);
@@ -78,10 +78,10 @@ public class RMDupperUnsortedTest extends AbstractTest {
       for (int skip = 0; skip < 4; skip++) { it.next(); }
       for (int i = 0; i < 2; i++) {
           SAMRecord curr = (SAMRecord) it.next();
-          RMDupper.queueOrOutput (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet, curr);
+          RMDupper.queueOrOutput (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet, curr);
       }
 
-      RMDupper.checkForDuplication (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet);
+      RMDupper.checkForDuplication (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet);
 
       while (recordBuffer.size() > 0) {
         outputSam.addAlignment(recordBuffer.poll().right);
@@ -102,10 +102,10 @@ public class RMDupperUnsortedTest extends AbstractTest {
       for (int skip = 0; skip < 6; skip++) { it.next(); }
       for (int i = 0; i < 2; i++) {
           SAMRecord curr = (SAMRecord) it.next();
-          RMDupper.queueOrOutput (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet, curr);
+          RMDupper.queueOrOutput (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet, curr);
       }
 
-      RMDupper.checkForDuplication (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet);
+      RMDupper.checkForDuplication (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet);
 
       while (recordBuffer.size() > 0) {
         outputSam.addAlignment(recordBuffer.poll().right);
