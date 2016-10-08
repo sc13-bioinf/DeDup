@@ -9,7 +9,7 @@ import org.junit.runners.Suite;
 	ForwardTest.class,
 	ForwardWithMergedTest.class,
 	ReverseTest.class,
-	ReverseWithMergedTest.class,
+  ReverseWithMergedTest.class,
 	RMDupperTest.class,
 	RMDupperUnsortedTest.class,
 	SingleTest.class,
