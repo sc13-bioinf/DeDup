@@ -251,7 +251,7 @@ public class RMDupper{
      * Currently, only merged Reads with the "M" Flag in front are checked for Duplicates.
      * R/F Flags are simply written into output File, also other "non-flagged" ones.
      */
-    public void readSAMFile() throws IOException {
+    public void readSAMFile() {
         Comparator<SAMRecord> samRecordComparatorForRecordBuffer = new SAMRecordPositionAndQualityComparator();
         Comparator<SAMRecord> samRecordComparatorForDuplicateBuffer;
 
@@ -289,7 +289,6 @@ public class RMDupper{
             }
         }
         flushQueue(this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet);
-        finish();
     }
 
     public static void queueOrOutput (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer, Set<String> discardSet, SAMRecord curr) {
