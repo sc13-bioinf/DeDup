@@ -12,7 +12,7 @@ import main.java.RMDupper;
 public class StackReadOneTest extends AbstractTest {
 
   public void setUp () throws IOException {
-        in = getClass().getResourceAsStream("/test-resources/stack_read_one_test.bam");
+        in = getClass().getResourceAsStream("/stack_read_one_test.bam");
         allReadsAsMerged = Boolean.FALSE;
         universalSetup();
   }

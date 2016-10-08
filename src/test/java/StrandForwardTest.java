@@ -12,7 +12,7 @@ import main.java.RMDupper;
 public class StrandForwardTest extends AbstractTest {
 
   public void setUp () throws IOException {
-        in = getClass().getResourceAsStream("/test-resources/strand_forward.bam");
+        in = getClass().getResourceAsStream("/strand_forward.bam");
         allReadsAsMerged = Boolean.FALSE;
         universalSetup();
   }

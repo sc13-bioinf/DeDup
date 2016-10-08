@@ -12,7 +12,7 @@ import main.java.RMDupper;
 public class StackTest extends AbstractTest {
 
   public void setUp () throws IOException {
-        in = getClass().getResourceAsStream("/test-resources/stack_test.bam");
+        in = getClass().getResourceAsStream("/stack_test.bam");
         allReadsAsMerged = Boolean.FALSE;
         universalSetup();
   }
