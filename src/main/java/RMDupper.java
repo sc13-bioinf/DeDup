@@ -25,6 +25,8 @@ import java.io.OutputStream;
 import java.text.DecimalFormat;
 import htsjdk.samtools.*;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.io.File;
 
 import main.java.datastructure.OccurenceCounterMerged;
@@ -47,7 +49,7 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
  */
 public class RMDupper{
     private static final String CLASS_NAME = "dedup";
-    private static final String VERSION = "0.11.3";
+    private static final String VERSION = "0.11.4";
     private static boolean piped = true;
 
     private final Boolean allReadsAsMerged;
@@ -55,6 +57,46 @@ public class RMDupper{
     private final SAMFileWriter outputSam;
     private final DupStats dupStats = new DupStats();
     private OccurenceCounterMerged oc = new OccurenceCounterMerged();
+
+    //private final EnumSet<DL>[] duplicatConditionsValues = new EnumSet<DL>[] {};
+    private static final List<EnumSet<DL>> duplicateCondition = Arrays.asList(
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_merged,DL.equal_alignment_start,DL.equal_alignment_end),
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_one,DL.equal_alignment_start,DL.maybed_shorter_or_equal,DL.buffer_forward_strand,DL.maybed_forward_strand),
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_one,DL.equal_alignment_start,DL.maybed_shorter_or_equal,DL.buffer_reverse_strand,DL.maybed_forward_strand),
+
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_one,DL.equal_alignment_end,DL.maybed_shorter_or_equal,DL.buffer_forward_strand,DL.maybed_reverse_strand),
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_one,DL.equal_alignment_end,DL.maybed_shorter_or_equal,DL.buffer_reverse_strand,DL.maybed_reverse_strand),
+
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_two,DL.equal_alignment_end,DL.maybed_shorter_or_equal,DL.buffer_forward_strand,DL.maybed_forward_strand),
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_two,DL.equal_alignment_end,DL.maybed_shorter_or_equal,DL.buffer_reverse_strand,DL.maybed_forward_strand),
+
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_two,DL.equal_alignment_start,DL.maybed_shorter_or_equal,DL.buffer_forward_strand,DL.maybed_reverse_strand),
+      EnumSet.of(DL.buffer_read_merged,DL.maybed_read_two,DL.equal_alignment_start,DL.maybed_shorter_or_equal,DL.buffer_reverse_strand,DL.maybed_reverse_strand),
+
+
+
+      EnumSet.of(DL.buffer_read_one,DL.maybed_read_merged,DL.equal_alignment_start,DL.maybed_longer_or_equal,DL.buffer_forward_strand),
+      EnumSet.of(DL.buffer_read_one,DL.maybed_read_merged,DL.equal_alignment_end,DL.maybed_longer_or_equal,DL.buffer_reverse_strand),
+
+      EnumSet.of(DL.buffer_read_one,DL.maybed_read_one,DL.equal_alignment_start,DL.buffer_forward_strand,DL.maybed_forward_strand),
+      EnumSet.of(DL.buffer_read_one,DL.maybed_read_one,DL.equal_alignment_end,DL.buffer_reverse_strand,DL.maybed_reverse_strand),
+
+      EnumSet.of(DL.buffer_read_one,DL.maybed_read_two,DL.equal_alignment_start,DL.maybed_shorter_or_equal,DL.buffer_forward_strand,DL.maybed_reverse_strand),
+      EnumSet.of(DL.buffer_read_one,DL.maybed_read_two,DL.equal_alignment_end,DL.maybed_shorter_or_equal,DL.buffer_reverse_strand,DL.maybed_forward_strand),
+
+
+
+      EnumSet.of(DL.buffer_read_two,DL.maybed_read_merged,DL.equal_alignment_end,DL.maybed_longer_or_equal,DL.buffer_forward_strand),
+      EnumSet.of(DL.buffer_read_two,DL.maybed_read_merged,DL.equal_alignment_start,DL.maybed_longer_or_equal,DL.buffer_reverse_strand),
+
+      EnumSet.of(DL.buffer_read_two,DL.maybed_read_one,DL.equal_alignment_end,DL.maybed_shorter_or_equal,DL.buffer_forward_strand,DL.maybed_reverse_strand),
+      EnumSet.of(DL.buffer_read_two,DL.maybed_read_one,DL.equal_alignment_start,DL.maybed_shorter_or_equal,DL.buffer_reverse_strand,DL.maybed_forward_strand),
+
+      EnumSet.of(DL.buffer_read_two,DL.maybed_read_two,DL.equal_alignment_end,DL.buffer_forward_strand,DL.maybed_forward_strand),
+      EnumSet.of(DL.buffer_read_two,DL.maybed_read_two,DL.equal_alignment_start,DL.buffer_reverse_strand,DL.maybed_reverse_strand)
+
+    );
+    private static final Set<EnumSet<DL>> duplicateConditionSet =  new HashSet<EnumSet<DL>>(duplicateCondition);
 
     public RMDupper(File inputFile, File outputFile, Boolean merged) {
         inputSam = SamReaderFactory.make().enable(SamReaderFactory.Option.DONT_MEMORY_MAP_INDEX).validationStringency(ValidationStringency.LENIENT).open(inputFile);
@@ -209,10 +251,21 @@ public class RMDupper{
      * Currently, only merged Reads with the "M" Flag in front are checked for Duplicates.
      * R/F Flags are simply written into output File, also other "non-flagged" ones.
      */
-    public void readSAMFile() throws IOException {
-        ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer = new ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>>(1000);
+    public void readSAMFile() {
+        Comparator<SAMRecord> samRecordComparatorForRecordBuffer = new SAMRecordPositionAndQualityComparator();
+        Comparator<SAMRecord> samRecordComparatorForDuplicateBuffer;
+
+        if ( this.allReadsAsMerged ) {
+          samRecordComparatorForDuplicateBuffer = new SAMRecordQualityComparator();
+        } else {
+          samRecordComparatorForDuplicateBuffer = new SAMRecordQualityComparatorPreferMerged();
+        }
+
+        PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, samRecordComparatorForRecordBuffer));
+        PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, samRecordComparatorForDuplicateBuffer.reversed()));
         Set<String> discardSet = new HashSet<String>(1000);
         String referenceName = SAMRecord.NO_ALIGNMENT_REFERENCE_NAME;
+
         Iterator it = inputSam.iterator();
         while (it.hasNext()) {
             SAMRecord curr = (SAMRecord) it.next();
@@ -220,10 +273,10 @@ public class RMDupper{
                 this.outputSam.addAlignment(curr);
             } else {
                 if ( referenceName == curr.getReferenceName() ) {
-                    queueOrOutput (this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, discardSet, curr);
+                    queueOrOutput (this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet, curr);
                 } else {
-                    flushQueue (this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, discardSet);
-                    queueOrOutput (this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, discardSet, curr);
+                    flushQueue (this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet);
+                    queueOrOutput (this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet, curr);
                     referenceName = curr.getReferenceName();
                 }
             }
@@ -235,92 +288,115 @@ public class RMDupper{
                 }
             }
         }
-        flushQueue(this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, discardSet);
-        finish();
+        flushQueue(this.dupStats, this.oc, this.outputSam, this.allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet);
     }
 
-    public static void queueOrOutput (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet, SAMRecord curr) {
+    public static void queueOrOutput (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer, Set<String> discardSet, SAMRecord curr) {
         //Don't do anything with unmapped reads, just write them into the output!
         if (curr.getReadUnmappedFlag() || curr.getMappingQuality() == 0) {
           outputSam.addAlignment(curr);
         } else {
-            if ( recordBuffer.size() > 0 && recordBuffer.peekFirst().middle < curr.getAlignmentStart() ) {
-                checkForDuplication(dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet);
+            if ( recordBuffer.size() > 0 && recordBuffer.peek().middle < curr.getAlignmentStart() ) {
+                checkForDuplication(dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet);
             }
             recordBuffer.add (new ImmutableTriple<Integer, Integer, SAMRecord>(curr.getAlignmentStart(), curr.getAlignmentEnd(), curr));
         }
     }
 
-    public static void flushQueue (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
+    public static void flushQueue (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer, Set<String> discardSet) {
         while ( !recordBuffer.isEmpty() ) {
-            checkForDuplication (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, discardSet);
+            checkForDuplication (dupStats, occurenceCounterMerged, outputSam, allReadsAsMerged, recordBuffer, duplicateBuffer, discardSet);
         }
         discardSet.clear();
     }
 
-    public static void checkForDuplication (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, ArrayDeque<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, Set<String> discardSet) {
+    public static void checkForDuplication (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer, Set<String> discardSet) {
         // At this point recordBuffer contains all alignments that overlap with its first entry
         // Therefore the task here is to de-duplicate for the first entry in recordBuffer
-        Comparator<SAMRecord> samRecordComparator;
-        if ( allReadsAsMerged ) {
-          samRecordComparator = new SAMRecordQualityComparator();
-        } else {
-          samRecordComparator = new SAMRecordQualityComparatorPreferMerged();
-        }
-
-        PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer = new PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>>(1000, Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, samRecordComparator.reversed()));
+        duplicateBuffer.clear();
 
         Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> it = recordBuffer.iterator();
         while (it.hasNext()) {
           ImmutableTriple<Integer, Integer, SAMRecord> maybeDuplicate = it.next();
-          boolean duplicateIsShorterOrEqual = maybeDuplicate.middle - maybeDuplicate.left <= recordBuffer.peekFirst().middle - recordBuffer.peekFirst().left;
-          boolean duplicateIsLongerOrEqual = recordBuffer.peekFirst().middle - recordBuffer.peekFirst().left <= maybeDuplicate.middle - maybeDuplicate.left;
 
           if ( allReadsAsMerged ) {
-            if ( recordBuffer.peekFirst().left.equals(maybeDuplicate.left)  &&
-                 recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) {
-                 //System.out.println("* add");
+            if ( recordBuffer.peek().left.equals(maybeDuplicate.left)  &&
+                 recordBuffer.peek().middle.equals(maybeDuplicate.middle) ) {
                  duplicateBuffer.add(maybeDuplicate);
             }
           } else {
-            if ( recordBuffer.peekFirst().right.getReadName().startsWith("M_") &&
-                 ( ( maybeDuplicate.right.getReadName().startsWith("M_") &&
-                     recordBuffer.peekFirst().left.equals(maybeDuplicate.left)  &&
-                     recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) ||
-                   ( maybeDuplicate.right.getReadName().startsWith("F_") &&
-                     recordBuffer.peekFirst().left.equals(maybeDuplicate.left) &&
-                     duplicateIsShorterOrEqual ) ||
-                   ( maybeDuplicate.right.getReadName().startsWith("R_") &&
-                     recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) &&
-                     duplicateIsShorterOrEqual ) ) ) {
-              //System.out.println("M_ add");
-              duplicateBuffer.add(maybeDuplicate);
-            } else if ( recordBuffer.peekFirst().right.getReadName().startsWith("F_") &&
-                        ( ( maybeDuplicate.right.getReadName().startsWith("M_") &&
-                            recordBuffer.peekFirst().left.equals(maybeDuplicate.left) &&
-                            duplicateIsLongerOrEqual ) ||
-                          ( maybeDuplicate.right.getReadName().startsWith("F_") &&
-                            recordBuffer.peekFirst().left.equals(maybeDuplicate.left) ) ||
-                          ( maybeDuplicate.right.getReadName().startsWith("R_") &&
-                            recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) &&
-                            duplicateIsShorterOrEqual ) ) ) {
-              //System.out.println("F_ add");
-              duplicateBuffer.add(maybeDuplicate);
-            } else if ( recordBuffer.peekFirst().right.getReadName().startsWith("R_") &&
-                        ( ( maybeDuplicate.right.getReadName().startsWith("M_") &&
-                            recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) &&
-                            duplicateIsLongerOrEqual ) ||
-                          ( maybeDuplicate.right.getReadName().startsWith("F_") &&
-                            recordBuffer.peekFirst().left.equals(maybeDuplicate.left) &&
-                            recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) ||
-                          ( maybeDuplicate.right.getReadName().startsWith("R_") &&
-                            recordBuffer.peekFirst().middle.equals(maybeDuplicate.middle) ) ) ) {
-              //System.out.println("R_ add");
+            // We build a logic table
+            EnumSet<DL> testConditon = EnumSet.noneOf(DL.class);
+            if ( recordBuffer.peek().right.getReadName().startsWith("M_") ) {
+              testConditon.add(DL.buffer_read_merged);
+            } else if ( recordBuffer.peek().right.getReadName().startsWith("F_") ) {
+              testConditon.add(DL.buffer_read_one);
+            } else if ( recordBuffer.peek().right.getReadName().startsWith("R_") ) {
+              testConditon.add(DL.buffer_read_two);
+            } else {
+              throw new RuntimeException("Unlabelled read '" + recordBuffer.peek().right.getReadName() + "' read name must start with one of M_,F_,R when not treating all reads as merged");
+            }
+
+            if ( maybeDuplicate.right.getReadName().startsWith("M_") ) {
+              testConditon.add(DL.maybed_read_merged);
+            } else if ( maybeDuplicate.right.getReadName().startsWith("F_") ) {
+              testConditon.add(DL.maybed_read_one);
+            } else if ( maybeDuplicate.right.getReadName().startsWith("R_") ) {
+              testConditon.add(DL.maybed_read_two);
+            } else {
+              System.err.println("Unlabelled read '" + maybeDuplicate.right.getReadName() + "' read name must start with one of M_,F_,R when not treating all reads as merged");
+            }
+
+            if ( recordBuffer.peek().left.equals(maybeDuplicate.left) ) { testConditon.add(DL.equal_alignment_start); }
+            if ( recordBuffer.peek().middle.equals(maybeDuplicate.middle) ) { testConditon.add(DL.equal_alignment_end); }
+
+            boolean duplicateIsShorterOrEqual = maybeDuplicate.middle - maybeDuplicate.left <= recordBuffer.peek().middle - recordBuffer.peek().left;
+            boolean duplicateIsLongerOrEqual = recordBuffer.peek().middle - recordBuffer.peek().left <= maybeDuplicate.middle - maybeDuplicate.left;
+
+            if ( duplicateIsShorterOrEqual ) { testConditon.add(DL.maybed_shorter_or_equal); }
+            if ( duplicateIsLongerOrEqual ) { testConditon.add(DL.maybed_longer_or_equal); }
+
+            if ( recordBuffer.peek().right.getReadNegativeStrandFlag() ) { testConditon.add(DL.buffer_reverse_strand); } else { testConditon.add(DL.buffer_forward_strand); }
+            if ( maybeDuplicate.right.getReadNegativeStrandFlag() ) { testConditon.add(DL.maybed_reverse_strand); } else { testConditon.add(DL.maybed_forward_strand); }
+
+            //System.out.println("Testing for duplication: "+testConditon);
+            //System.out.println(recordBuffer.peek().right.getReadName()+"\t"+recordBuffer.peek().right.getAlignmentStart()+"\t"+recordBuffer.peek().right.getAlignmentEnd());
+            //System.out.println(maybeDuplicate.right.getReadName()+"\t"+maybeDuplicate.right.getAlignmentStart()+"\t"+maybeDuplicate.right.getAlignmentEnd());
+
+            //for ( EnumSet<DL> match : duplicateConditionSet.stream().filter(dc -> testConditon.containsAll(dc) ).collect(Collectors.toList()) ) {
+            //  System.out.println("Match to: "+match);
+            //}
+            //for ( EnumSet<DL> match : duplicateConditionSet.stream().collect(Collectors.toList()) ) {
+            //  System.out.println("Try to match: "+match);
+            //  if ( match.containsAll(testConditon) )
+            //  {
+            //    System.out.println("success");
+            //  }
+            //}
+
+            // Test for Duplication
+            if ( duplicateConditionSet.stream().anyMatch( dc -> testConditon.containsAll(dc) ) ) {
               duplicateBuffer.add(maybeDuplicate);
             }
           }
         }
-        /* DEBUG
+        //START DEBUG
+        /*
+System.out.println ("recordBuffer");
+
+Comparator<SAMRecord> samRecordComparatorForRecordBuffer = new SAMRecordPositionAndQualityComparator();
+ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> sortedRecordBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(recordBuffer.size());
+Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> rit = recordBuffer.iterator();
+
+while (rit.hasNext()) {
+  sortedRecordBuffer.add(rit.next());
+}
+sortedRecordBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, samRecordComparatorForRecordBuffer));
+
+for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedRecordBuffer ) {
+    System.out.println(" srb: "+(currTriple.right.getReadNegativeStrandFlag()?"-":"+")+" "+currTriple+" "+SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
+}
+
 System.out.println ("duplicateBuffer");
 ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> sortedDuplicateBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(duplicateBuffer.size());
 Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> dit = duplicateBuffer.iterator();
@@ -330,16 +406,16 @@ while (dit.hasNext()) {
 sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getMiddle));
 
 for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
-    System.out.println("dbe: "+currTriple+" "+main.java.SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
+    System.out.println(" dbe: "+(currTriple.right.getReadNegativeStrandFlag()?"-":"+")+" "+currTriple+" "+SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
 }
 
 // Sort again with priority queue order
 sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, samRecordComparator.reversed()));
 for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
-    System.out.println("sdbe: "+currTriple+" "+main.java.SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
+    System.out.println("sdbe: "+(currTriple.right.getReadNegativeStrandFlag()?"-":"+")+" "+currTriple+" "+SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
 }
-
-END DEBUG */
+*/
+//END DEBUG
        if ( !duplicateBuffer.isEmpty() && !discardSet.contains(duplicateBuffer.peek().right.getReadName()) ) {
          //System.out.println("WRITE "+duplicateBuffer.peek());
          decrementDuplicateStats(dupStats, allReadsAsMerged, duplicateBuffer.peek().right.getReadName());
@@ -350,7 +426,7 @@ END DEBUG */
          discardSet.add(duplicateBuffer.poll().right.getReadName());
        }
        // Maintain the invariant that the first item in recordBuffer may have duplicates
-       while ( !recordBuffer.isEmpty() && discardSet.contains(recordBuffer.peekFirst().right.getReadName()) ) {
+       while ( !recordBuffer.isEmpty() && discardSet.contains(recordBuffer.peek().right.getReadName()) ) {
          String duplicateReadName = recordBuffer.poll().right.getReadName();
          incrementDuplicateStats(dupStats, allReadsAsMerged, duplicateReadName);
          discardSet.remove(duplicateReadName);
