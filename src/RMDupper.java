@@ -51,7 +51,7 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
  */
 public class RMDupper{
     private static final String CLASS_NAME = "dedup";
-    private static final String VERSION = "0.11.2";
+    private static final String VERSION = "0.11.4";
 
     private final Boolean allReadsAsMerged;
     private final SamReader inputSam;
