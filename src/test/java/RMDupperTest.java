@@ -1,3 +1,4 @@
+package test.java;
 
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;
@@ -10,13 +11,14 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import datastructure.DupStats;
-import datastructure.OccurenceCounterMerged;
+import main.java.RMDupper;
+import main.java.datastructure.DupStats;
+import main.java.datastructure.OccurenceCounterMerged;
 
 public class RMDupperTest extends AbstractTest {
 
   public void setUp () throws IOException {
-        in = getClass().getResourceAsStream("/test-resources/queueOrOutput_test_trigger_checkForDuplication_only_f.bam");
+        in = getClass().getResourceAsStream("/queueOrOutput_test_trigger_checkForDuplication_only_f.bam");
         allReadsAsMerged = Boolean.FALSE;
         universalSetup();
         inputSAMoutputSAMrecordBufferSetup();

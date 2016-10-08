@@ -25,6 +25,10 @@ import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.io.IOException;
 
+import main.java.SAMRecordQualityComparator;
+import main.java.SAMRecordQualityComparatorPreferMerged;
+import main.java.SAMRecordPositionAndQualityComparator;
+
 public abstract class AbstractTest {
   protected InputStream in = null;
   protected ByteArrayOutputStream out = null;
