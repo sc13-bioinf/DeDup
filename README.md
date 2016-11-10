@@ -2,6 +2,8 @@
 A merged read deduplication tool capable to perform merged read deduplication on single end data. 
 
 [![Build Status](https://lambda.informatik.uni-tuebingen.de/jenkins/view/EAGER/job/DeDup/badge/icon)](https://lambda.informatik.uni-tuebingen.de/jenkins/view/EAGER/job/DeDup/)
+[![codecov](https://codecov.io/gh/apeltzer/DeDup/branch/master/graph/badge.svg)](https://codecov.io/gh/apeltzer/DeDup)
+
 
 Author: Alexander Peltzer <alexander.peltzer@uni-tuebingen.de>
 
