@@ -381,10 +381,18 @@ public class RMDupper{
           }
         }
         //START DEBUG
-        /*
+/*
 System.out.println ("recordBuffer");
 
 Comparator<SAMRecord> samRecordComparatorForRecordBuffer = new SAMRecordPositionAndQualityComparator();
+Comparator<SAMRecord> samRecordComparatorForDuplicateBuffer;
+
+if ( allReadsAsMerged ) {
+  samRecordComparatorForDuplicateBuffer = new SAMRecordQualityComparator();
+} else {
+  samRecordComparatorForDuplicateBuffer = new SAMRecordQualityComparatorPreferMerged();
+}
+
 ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>> sortedRecordBuffer = new ArrayList<ImmutableTriple<Integer, Integer, SAMRecord>>(recordBuffer.size());
 Iterator<ImmutableTriple<Integer, Integer, SAMRecord>> rit = recordBuffer.iterator();
 
@@ -410,7 +418,7 @@ for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateB
 }
 
 // Sort again with priority queue order
-sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, samRecordComparator.reversed()));
+sortedDuplicateBuffer.sort(Comparator.comparing(ImmutableTriple<Integer, Integer, SAMRecord>::getRight, samRecordComparatorForDuplicateBuffer.reversed()));
 for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateBuffer ) {
     System.out.println("sdbe: "+(currTriple.right.getReadNegativeStrandFlag()?"-":"+")+" "+currTriple+" "+SAMRecordQualityComparator.getQualityScore(currTriple.right.getBaseQualityString()));
 }
