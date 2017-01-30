@@ -125,6 +125,7 @@ public class Data {
         "R_UNIQ_STACK_2_M_2"
         ).collect(Collectors.toSet());
         public static final Set<String> RMDupperTest__MAPQZero_expectedReadNames = Stream.of(
-        "F_NS500559:30:HNM25BGXX:4:21508:20245:5884"
+        "F_NS500559:30:HNM25BGXX:4:21508:20245:5884",
+        "F_mz_1"
         ).collect(Collectors.toSet());
 }
