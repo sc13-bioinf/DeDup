@@ -49,7 +49,7 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
  */
 public class RMDupper{
     private static final String CLASS_NAME = "dedup";
-    private static final String VERSION = "0.11.4";
+    private static final String VERSION = "0.12.0";
     private static boolean piped = true;
 
     private final Boolean allReadsAsMerged;
@@ -293,7 +293,7 @@ public class RMDupper{
 
     public static void queueOrOutput (DupStats dupStats, OccurenceCounterMerged occurenceCounterMerged, SAMFileWriter outputSam, Boolean allReadsAsMerged, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer, PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer, Set<String> discardSet, SAMRecord curr) {
         //Don't do anything with unmapped reads, just write them into the output!
-        if (curr.getReadUnmappedFlag() || curr.getMappingQuality() == 0) {
+        if (curr.getReadUnmappedFlag()) {
           outputSam.addAlignment(curr);
         } else {
             if ( recordBuffer.size() > 0 && recordBuffer.peek().middle < curr.getAlignmentStart() ) {
