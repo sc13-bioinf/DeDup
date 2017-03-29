@@ -49,7 +49,7 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
  */
 public class RMDupper{
     private static final String CLASS_NAME = "dedup";
-    private static final String VERSION = "0.12.0";
+    private static final String VERSION = "0.12.1";
     private static boolean piped = true;
 
     private final Boolean allReadsAsMerged;
@@ -98,16 +98,29 @@ public class RMDupper{
     );
     private static final Set<EnumSet<DL>> duplicateConditionSet =  new HashSet<EnumSet<DL>>(duplicateCondition);
 
-    public RMDupper(File inputFile, File outputFile, Boolean merged) {
+    public RMDupper(File inputFile, File outputFile, Boolean merged, Boolean unsorted) {
         inputSam = SamReaderFactory.make().enable(SamReaderFactory.Option.DONT_MEMORY_MAP_INDEX).validationStringency(ValidationStringency.LENIENT).open(inputFile);
+      if ( unsorted ) {
         outputSam = new SAMFileWriterFactory().makeSAMOrBAMWriter(inputSam.getFileHeader(), false, outputFile);
+      } else {
+        SAMFileHeader outputSamFileHeader = inputSam.getFileHeader().clone();
+        outputSamFileHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
+        outputSam = new SAMFileWriterFactory().makeSAMOrBAMWriter(outputSamFileHeader, false, outputFile);
+      }
         allReadsAsMerged = merged;
     }
 
 
-    public RMDupper(InputStream in, OutputStream out, Boolean merged) {
+    public RMDupper(InputStream in, OutputStream out, Boolean merged, Boolean unsorted) {
         inputSam = SamReaderFactory.make().enable(SamReaderFactory.Option.DONT_MEMORY_MAP_INDEX).validationStringency(ValidationStringency.LENIENT).open(SamInputResource.of(in));
-        outputSam = new SAMFileWriterFactory().makeSAMWriter(inputSam.getFileHeader(), false, out);
+        if ( unsorted )
+        {
+            outputSam = new SAMFileWriterFactory().makeSAMWriter(inputSam.getFileHeader(), false, out);
+        } else {
+            SAMFileHeader outputSamFileHeader = inputSam.getFileHeader().clone();
+            outputSamFileHeader.setSortOrder(SAMFileHeader.SortOrder.unsorted);
+            outputSam = new SAMFileWriterFactory().makeSAMWriter(outputSamFileHeader, false, out);
+        }
         allReadsAsMerged = merged;
     }
 
@@ -121,6 +134,7 @@ public class RMDupper{
         options.addOption("h", "help", false, "show this help page");
         options.addOption("i", "input", true, "the input file if this option is not specified,\nthe input is expected to be piped in");
         options.addOption("o", "output", true, "the output folder. Has to be specified if input is set.");
+        options.addOption("u", "unsorted", false, "Do not automatically sort the output");
         options.addOption("m", "merged", false, "the input only contains merged reads.\n If this option is specified read names are not examined for prefixes.\n Both the start and end of the aligment are considered for all reads.");
         options.addOption("v", "version", false, "the version of DeDup.");
         HelpFormatter helpformatter = new HelpFormatter();
@@ -137,6 +151,7 @@ public class RMDupper{
         String input = "";
         String outputpath = "";
         Boolean merged = Boolean.FALSE;
+        Boolean unsorted = Boolean.FALSE;
         try {
             CommandLine cmd = parser.parse(options, args);
 
@@ -154,6 +169,9 @@ public class RMDupper{
                 System.out.println("DeDup v" + VERSION);
                 System.exit(0);
             }
+          if (cmd.hasOption('u')){
+            unsorted = false;
+          }
         } catch (ParseException e) {
             helpformatter.printHelp(CLASS_NAME, options);
             System.err.println(e.getMessage());
@@ -162,7 +180,7 @@ public class RMDupper{
         DecimalFormat df = new DecimalFormat("##.##");
 
         if (piped) {
-            RMDupper rmdup = new RMDupper(System.in, System.out, merged);
+            RMDupper rmdup = new RMDupper(System.in, System.out, merged, unsorted);
             rmdup.readSAMFile();
 
             System.err.println("We are in piping mode!");
@@ -210,7 +228,7 @@ public class RMDupper{
                 BufferedWriter bfw = new BufferedWriter(fw);
                 BufferedWriter histbfw = new BufferedWriter(histfw);
 
-                RMDupper rmdup = new RMDupper(inputFile, outputFile, merged);
+                RMDupper rmdup = new RMDupper(inputFile, outputFile, merged, unsorted);
                 rmdup.readSAMFile();
                 rmdup.inputSam.close();
                 rmdup.outputSam.close();

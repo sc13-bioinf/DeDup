@@ -20,6 +20,7 @@ public class RMDupperUnsortedTest extends AbstractTest {
   public void setUp () throws IOException {
         in = getClass().getResourceAsStream("/queueOrOutput_test_unsorted.bam");
         allReadsAsMerged = Boolean.FALSE;
+        unsorted = Boolean.FALSE;
         universalSetup();
         inputSAMoutputSAMrecordBufferSetup();
   }

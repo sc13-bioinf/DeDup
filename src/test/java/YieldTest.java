@@ -14,12 +14,13 @@ public class YieldTest extends AbstractTest {
     public void setUp () throws IOException {
           in = getClass().getResourceAsStream("/yield_test.bam");
           allReadsAsMerged = Boolean.FALSE;
+          unsorted = Boolean.FALSE;
           universalSetup();
     }
 
     @Test
     public void resolveDuplicate_yields_best_quality () throws IOException {
-        RMDupper rmdup = new RMDupper(in, out, allReadsAsMerged);
+        RMDupper rmdup = new RMDupper(in, out, allReadsAsMerged, unsorted);
         rmdup.readSAMFile();
         rmdup.finish();
         copier.start();
