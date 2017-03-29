@@ -20,6 +20,7 @@ public class RMDupperTest extends AbstractTest {
   public void setUp () throws IOException {
         in = getClass().getResourceAsStream("/queueOrOutput_test_trigger_checkForDuplication_only_f.bam");
         allReadsAsMerged = Boolean.FALSE;
+        unsorted = Boolean.FALSE;
         universalSetup();
         inputSAMoutputSAMrecordBufferSetup();
   }

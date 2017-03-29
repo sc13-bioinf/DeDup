@@ -14,12 +14,13 @@ public class AllReadsAsMergedTest extends AbstractTest {
   public void setUp () throws IOException {
         in = getClass().getResourceAsStream("/all_reads_as_merged_test.bam");
         allReadsAsMerged = Boolean.TRUE;
+        unsorted = Boolean.FALSE;
         universalSetup();
   }
 
   @Test
   public void resolveDuplicate_forward_with_merged () throws IOException {
-    RMDupper rmdup = new RMDupper(in, out, allReadsAsMerged);
+    RMDupper rmdup = new RMDupper(in, out, allReadsAsMerged, unsorted);
     rmdup.readSAMFile();
     rmdup.finish();
     copier.start();

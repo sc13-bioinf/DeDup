@@ -20,12 +20,13 @@ public class ReverseTest extends AbstractTest {
   public void setUp () throws IOException {
         in = getClass().getResourceAsStream("/reverse_test.bam");
         allReadsAsMerged = Boolean.FALSE;
+        unsorted = Boolean.FALSE;
         universalSetup();
   }
 
   @Test
   public void resolveDuplicate_forward () throws IOException {
-    RMDupper rmdup = new RMDupper(in, out, allReadsAsMerged);
+    RMDupper rmdup = new RMDupper(in, out, allReadsAsMerged, unsorted);
     rmdup.readSAMFile();
     rmdup.finish();
     copier.start();

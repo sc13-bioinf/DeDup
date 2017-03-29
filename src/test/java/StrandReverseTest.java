@@ -14,12 +14,13 @@ public class StrandReverseTest extends AbstractTest {
   public void setUp () throws IOException {
         in = getClass().getResourceAsStream("/strand_reverse.bam");
         allReadsAsMerged = Boolean.FALSE;
+        unsorted = Boolean.FALSE;
         universalSetup();
   }
 
   @Test
   public void resolveDuplicate_strand_reverse () throws IOException {
-    RMDupper rmdup = new RMDupper(in, out, allReadsAsMerged);
+    RMDupper rmdup = new RMDupper(in, out, allReadsAsMerged, unsorted);
     rmdup.readSAMFile();
     rmdup.finish();
     copier.start();

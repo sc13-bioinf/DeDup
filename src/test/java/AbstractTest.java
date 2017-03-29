@@ -42,6 +42,7 @@ public abstract class AbstractTest {
   protected PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> recordBuffer;
   protected PriorityQueue<ImmutableTriple<Integer, Integer, SAMRecord>> duplicateBuffer;
   protected Boolean allReadsAsMerged;
+  protected Boolean unsorted;
 
   @Before
   public abstract void setUp () throws IOException;
