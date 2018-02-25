@@ -12,8 +12,8 @@ public class SAMRecordQualityComparatorPreferMerged implements Comparator<SAMRec
            return sa < sb ? -1 : ( sa == sb ?
 
            //0
-           ( !a.getReadName().startsWith("M_") && b.getReadName().startsWith("M_") ? -1 : (
-                a.getReadName().startsWith("M_") && b.getReadName().startsWith("M_") ? 0 : 1) )
+           ( !(a.getReadName().startsWith("M_")  || a.getReadName().startsWith("MT_") ) && ( b.getReadName().startsWith("M_") || b.getReadName().startsWith("MT_") ) ? -1 : (
+                ( a.getReadName().startsWith("M_") || a.getReadName().startsWith("MT_") ) && ( b.getReadName().startsWith("M_") || b.getReadName().startsWith("MT_") ) ? 0 : 1) )
 
            : 1);
        }

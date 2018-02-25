@@ -49,7 +49,7 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
  */
 public class RMDupper{
     private static final String CLASS_NAME = "dedup";
-    private static final String VERSION = "0.12.1";
+    private static final String VERSION = "0.12.3";
     private static boolean piped = true;
 
     private final Boolean allReadsAsMerged;
@@ -345,24 +345,24 @@ public class RMDupper{
           } else {
             // We build a logic table
             EnumSet<DL> testConditon = EnumSet.noneOf(DL.class);
-            if ( recordBuffer.peek().right.getReadName().startsWith("M_") ) {
+            if ( recordBuffer.peek().right.getReadName().startsWith("M_") || recordBuffer.peek().right.getReadName().startsWith("MT_") ) {
               testConditon.add(DL.buffer_read_merged);
             } else if ( recordBuffer.peek().right.getReadName().startsWith("F_") ) {
               testConditon.add(DL.buffer_read_one);
             } else if ( recordBuffer.peek().right.getReadName().startsWith("R_") ) {
               testConditon.add(DL.buffer_read_two);
             } else {
-              throw new RuntimeException("Unlabelled read '" + recordBuffer.peek().right.getReadName() + "' read name must start with one of M_,F_,R when not treating all reads as merged");
+              throw new RuntimeException("Unlabelled read '" + recordBuffer.peek().right.getReadName() + "' read name must start with one of M_,MT_,F_,R when not treating all reads as merged");
             }
 
-            if ( maybeDuplicate.right.getReadName().startsWith("M_") ) {
+            if ( maybeDuplicate.right.getReadName().startsWith("M_") || maybeDuplicate.right.getReadName().startsWith("MT_") ) {
               testConditon.add(DL.maybed_read_merged);
             } else if ( maybeDuplicate.right.getReadName().startsWith("F_") ) {
               testConditon.add(DL.maybed_read_one);
             } else if ( maybeDuplicate.right.getReadName().startsWith("R_") ) {
               testConditon.add(DL.maybed_read_two);
             } else {
-              System.err.println("Unlabelled read '" + maybeDuplicate.right.getReadName() + "' read name must start with one of M_,F_,R when not treating all reads as merged");
+              System.err.println("Unlabelled read '" + maybeDuplicate.right.getReadName() + "' read name must start with one of M_,MT_,F_,R when not treating all reads as merged");
             }
 
             if ( recordBuffer.peek().left.equals(maybeDuplicate.left) ) { testConditon.add(DL.equal_alignment_start); }
@@ -445,7 +445,7 @@ for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateB
        if ( !duplicateBuffer.isEmpty() && !discardSet.contains(duplicateBuffer.peek().right.getReadName()) ) {
          //System.out.println("WRITE "+duplicateBuffer.peek());
          decrementDuplicateStats(dupStats, allReadsAsMerged, duplicateBuffer.peek().right.getReadName());
-         occurenceCounterMerged.putValue(Long.valueOf(duplicateBuffer.stream().filter(d -> allReadsAsMerged || d.right.getReadName().startsWith("M_")).count()).intValue() - 1);
+         occurenceCounterMerged.putValue(Long.valueOf(duplicateBuffer.stream().filter(d -> allReadsAsMerged || d.right.getReadName().startsWith("M_") || d.right.getReadName().startsWith("MT_") ).count()).intValue() - 1);
          outputSam.addAlignment(duplicateBuffer.peek().right);
        }
        while ( !duplicateBuffer.isEmpty() ) {
@@ -465,7 +465,7 @@ for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateB
     }
 
     public static void incrementDuplicateStats (DupStats dupStats, Boolean allReadsAsMerged, String readName) {
-      if ( allReadsAsMerged || readName.startsWith("M_") ) {
+      if ( allReadsAsMerged || readName.startsWith("M_") || readName.startsWith("MT_") ) {
         dupStats.removed_merged++;
       } else if ( readName.startsWith("F_") ) {
         dupStats.removed_forward++;
@@ -475,7 +475,7 @@ for ( ImmutableTriple<Integer, Integer, SAMRecord> currTriple : sortedDuplicateB
     }
 
     public static void decrementDuplicateStats (DupStats dupStats, Boolean allReadsAsMerged, String readName) {
-      if ( allReadsAsMerged || readName.startsWith("M_") ) {
+      if ( allReadsAsMerged || readName.startsWith("M_") || readName.startsWith("MT_") ) {
         dupStats.removed_merged--;
       } else if ( readName.startsWith("F_") ) {
         dupStats.removed_forward--;
